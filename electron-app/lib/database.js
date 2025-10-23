@@ -17,8 +17,8 @@ class ProxyDatabase {
 
   initializeSchema() {
     this.db.exec(`
-      -- Transmitters (sources of OSC messages)
-      CREATE TABLE IF NOT EXISTS transmitters (
+      -- Listeners (sources of OSC messages)
+      CREATE TABLE IF NOT EXISTS listeners (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,
         enabled BOOLEAN DEFAULT 1,
@@ -30,10 +30,10 @@ class ProxyDatabase {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Receivers (destinations for OSC messages)
-      CREATE TABLE IF NOT EXISTS receivers (
+      -- Forwarders (destinations for OSC messages)
+      CREATE TABLE IF NOT EXISTS forwarders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transmitter_id INTEGER NOT NULL,
+        listener_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         enabled BOOLEAN DEFAULT 1,
         protocol TEXT NOT NULL CHECK(protocol IN ('udp', 'tcp')),
@@ -45,13 +45,13 @@ class ProxyDatabase {
         connect_timeout INTEGER DEFAULT 5,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (transmitter_id) REFERENCES transmitters(id) ON DELETE CASCADE
+        FOREIGN KEY (listener_id) REFERENCES listeners(id) ON DELETE CASCADE
       );
 
       -- Metrics history (for visualization)
       CREATE TABLE IF NOT EXISTS metrics_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transmitter_id INTEGER,
+        listener_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         rate REAL,
         avg_rate REAL,
@@ -61,76 +61,76 @@ class ProxyDatabase {
         forwarded INTEGER,
         dropped INTEGER,
         loss_pct REAL,
-        FOREIGN KEY (transmitter_id) REFERENCES transmitters(id) ON DELETE CASCADE
+        FOREIGN KEY (listener_id) REFERENCES listeners(id) ON DELETE CASCADE
       );
 
       CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics_history(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_metrics_transmitter ON metrics_history(transmitter_id);
+      CREATE INDEX IF NOT EXISTS idx_metrics_listener ON metrics_history(listener_id);
     `);
   }
 
-  // ==================== TRANSMITTER OPERATIONS ====================
+  // ==================== LISTENER OPERATIONS ====================
 
   /**
-   * Get all transmitters with their receivers
-   * @returns {Array} Array of transmitter objects with nested receivers
+   * Get all listeners with their forwarders
+   * @returns {Array} Array of listener objects with nested forwarders
    */
-  getAllTransmitters() {
-    const transmitters = this.db.prepare(`
-      SELECT * FROM transmitters ORDER BY name
+  getAllListeners() {
+    const listeners = this.db.prepare(`
+      SELECT * FROM listeners ORDER BY name
     `).all();
 
-    // Fetch receivers for each transmitter
-    return transmitters.map(transmitter => ({
-      ...transmitter,
-      enabled: Boolean(transmitter.enabled),
-      receivers: this.getReceiversForTransmitter(transmitter.id)
+    // Fetch forwarders for each listener
+    return listeners.map(listener => ({
+      ...listener,
+      enabled: Boolean(listener.enabled),
+      forwarders: this.getForwardersForListener(listener.id)
     }));
   }
 
   /**
-   * Get a single transmitter by ID
-   * @param {number} id - Transmitter ID
-   * @returns {Object|null} Transmitter object or null
+   * Get a single listener by ID
+   * @param {number} id - Listener ID
+   * @returns {Object|null} Listener object or null
    */
-  getTransmitter(id) {
-    const transmitter = this.db.prepare(`
-      SELECT * FROM transmitters WHERE id = ?
+  getListener(id) {
+    const listener = this.db.prepare(`
+      SELECT * FROM listeners WHERE id = ?
     `).get(id);
 
-    if (!transmitter) return null;
+    if (!listener) return null;
 
     return {
-      ...transmitter,
-      enabled: Boolean(transmitter.enabled),
-      receivers: this.getReceiversForTransmitter(id)
+      ...listener,
+      enabled: Boolean(listener.enabled),
+      forwarders: this.getForwardersForListener(id)
     };
   }
 
   /**
-   * Get enabled transmitters only
-   * @returns {Array} Array of enabled transmitters with receivers
+   * Get enabled listeners only
+   * @returns {Array} Array of enabled listeners with forwarders
    */
-  getEnabledTransmitters() {
-    const transmitters = this.db.prepare(`
-      SELECT * FROM transmitters WHERE enabled = 1 ORDER BY name
+  getEnabledListeners() {
+    const listeners = this.db.prepare(`
+      SELECT * FROM listeners WHERE enabled = 1 ORDER BY name
     `).all();
 
-    return transmitters.map(transmitter => ({
-      ...transmitter,
-      enabled: Boolean(transmitter.enabled),
-      receivers: this.getReceiversForTransmitter(transmitter.id).filter(r => r.enabled)
+    return listeners.map(listener => ({
+      ...listener,
+      enabled: Boolean(listener.enabled),
+      forwarders: this.getForwardersForListener(listener.id).filter(f => f.enabled)
     }));
   }
 
   /**
-   * Create a new transmitter
-   * @param {Object} data - Transmitter data
-   * @returns {Object} Created transmitter with ID
+   * Create a new listener
+   * @param {Object} data - Listener data
+   * @returns {Object} Created listener with ID
    */
-  createTransmitter(data) {
+  createListener(data) {
     const stmt = this.db.prepare(`
-      INSERT INTO transmitters (name, enabled, protocol, bind_address, port, max_message_size)
+      INSERT INTO listeners (name, enabled, protocol, bind_address, port, max_message_size)
       VALUES (@name, @enabled, @protocol, @bind_address, @port, @max_message_size)
     `);
 
@@ -143,18 +143,18 @@ class ProxyDatabase {
       max_message_size: data.max_message_size || 8192
     });
 
-    return this.getTransmitter(info.lastInsertRowid);
+    return this.getListener(info.lastInsertRowid);
   }
 
   /**
-   * Update a transmitter
-   * @param {number} id - Transmitter ID
-   * @param {Object} data - Updated transmitter data
-   * @returns {Object|null} Updated transmitter or null
+   * Update a listener
+   * @param {number} id - Listener ID
+   * @param {Object} data - Updated listener data
+   * @returns {Object|null} Updated listener or null
    */
-  updateTransmitter(id, data) {
+  updateListener(id, data) {
     const stmt = this.db.prepare(`
-      UPDATE transmitters
+      UPDATE listeners
       SET name = @name,
           enabled = @enabled,
           protocol = @protocol,
@@ -175,96 +175,96 @@ class ProxyDatabase {
       max_message_size: data.max_message_size || 8192
     });
 
-    return info.changes > 0 ? this.getTransmitter(id) : null;
+    return info.changes > 0 ? this.getListener(id) : null;
   }
 
   /**
-   * Delete a transmitter (cascades to receivers)
-   * @param {number} id - Transmitter ID
+   * Delete a listener (cascades to forwarders)
+   * @param {number} id - Listener ID
    * @returns {boolean} True if deleted
    */
-  deleteTransmitter(id) {
-    const stmt = this.db.prepare(`DELETE FROM transmitters WHERE id = ?`);
+  deleteListener(id) {
+    const stmt = this.db.prepare(`DELETE FROM listeners WHERE id = ?`);
     const info = stmt.run(id);
     return info.changes > 0;
   }
 
   /**
-   * Toggle transmitter enabled state
-   * @param {number} id - Transmitter ID
-   * @returns {Object|null} Updated transmitter
+   * Toggle listener enabled state
+   * @param {number} id - Listener ID
+   * @returns {Object|null} Updated listener
    */
-  toggleTransmitter(id) {
+  toggleListener(id) {
     const stmt = this.db.prepare(`
-      UPDATE transmitters
+      UPDATE listeners
       SET enabled = NOT enabled,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     stmt.run(id);
-    return this.getTransmitter(id);
+    return this.getListener(id);
   }
 
-  // ==================== RECEIVER OPERATIONS ====================
+  // ==================== FORWARDER OPERATIONS ====================
 
   /**
-   * Get all receivers for a specific transmitter
-   * @param {number} transmitterId - Transmitter ID
-   * @returns {Array} Array of receiver objects
+   * Get all forwarders for a specific listener
+   * @param {number} listenerId - Listener ID
+   * @returns {Array} Array of forwarder objects
    */
-  getReceiversForTransmitter(transmitterId) {
-    const receivers = this.db.prepare(`
-      SELECT * FROM receivers WHERE transmitter_id = ? ORDER BY name
-    `).all(transmitterId);
+  getForwardersForListener(listenerId) {
+    const forwarders = this.db.prepare(`
+      SELECT * FROM forwarders WHERE listener_id = ? ORDER BY name
+    `).all(listenerId);
 
-    return receivers.map(receiver => ({
-      ...receiver,
-      enabled: Boolean(receiver.enabled),
-      keepalive: Boolean(receiver.keepalive),
-      nodelay: Boolean(receiver.nodelay)
+    return forwarders.map(forwarder => ({
+      ...forwarder,
+      enabled: Boolean(forwarder.enabled),
+      keepalive: Boolean(forwarder.keepalive),
+      nodelay: Boolean(forwarder.nodelay)
     }));
   }
 
   /**
-   * Get a single receiver by ID
-   * @param {number} id - Receiver ID
-   * @returns {Object|null} Receiver object or null
+   * Get a single forwarder by ID
+   * @param {number} id - Forwarder ID
+   * @returns {Object|null} Forwarder object or null
    */
-  getReceiver(id) {
-    const receiver = this.db.prepare(`
-      SELECT * FROM receivers WHERE id = ?
+  getForwarder(id) {
+    const forwarder = this.db.prepare(`
+      SELECT * FROM forwarders WHERE id = ?
     `).get(id);
 
-    if (!receiver) return null;
+    if (!forwarder) return null;
 
     return {
-      ...receiver,
-      enabled: Boolean(receiver.enabled),
-      keepalive: Boolean(receiver.keepalive),
-      nodelay: Boolean(receiver.nodelay)
+      ...forwarder,
+      enabled: Boolean(forwarder.enabled),
+      keepalive: Boolean(forwarder.keepalive),
+      nodelay: Boolean(forwarder.nodelay)
     };
   }
 
   /**
-   * Create a new receiver
-   * @param {number} transmitterId - Transmitter ID
-   * @param {Object} data - Receiver data
-   * @returns {Object} Created receiver with ID
+   * Create a new forwarder
+   * @param {number} listenerId - Listener ID
+   * @param {Object} data - Forwarder data
+   * @returns {Object} Created forwarder with ID
    */
-  createReceiver(transmitterId, data) {
+  createForwarder(listenerId, data) {
     const stmt = this.db.prepare(`
-      INSERT INTO receivers (
-        transmitter_id, name, enabled, protocol, host, port,
+      INSERT INTO forwarders (
+        listener_id, name, enabled, protocol, host, port,
         keepalive, keepalive_interval, nodelay, connect_timeout
       )
       VALUES (
-        @transmitter_id, @name, @enabled, @protocol, @host, @port,
+        @listener_id, @name, @enabled, @protocol, @host, @port,
         @keepalive, @keepalive_interval, @nodelay, @connect_timeout
       )
     `);
 
     const info = stmt.run({
-      transmitter_id: transmitterId,
+      listener_id: listenerId,
       name: data.name,
       enabled: data.enabled ? 1 : 0,
       protocol: data.protocol || 'tcp',
@@ -276,18 +276,18 @@ class ProxyDatabase {
       connect_timeout: data.connect_timeout || 5
     });
 
-    return this.getReceiver(info.lastInsertRowid);
+    return this.getForwarder(info.lastInsertRowid);
   }
 
   /**
-   * Update a receiver
-   * @param {number} id - Receiver ID
-   * @param {Object} data - Updated receiver data
-   * @returns {Object|null} Updated receiver or null
+   * Update a forwarder
+   * @param {number} id - Forwarder ID
+   * @param {Object} data - Updated forwarder data
+   * @returns {Object|null} Updated forwarder or null
    */
-  updateReceiver(id, data) {
+  updateForwarder(id, data) {
     const stmt = this.db.prepare(`
-      UPDATE receivers
+      UPDATE forwarders
       SET name = @name,
           enabled = @enabled,
           protocol = @protocol,
@@ -314,54 +314,54 @@ class ProxyDatabase {
       connect_timeout: data.connect_timeout || 5
     });
 
-    return info.changes > 0 ? this.getReceiver(id) : null;
+    return info.changes > 0 ? this.getForwarder(id) : null;
   }
 
   /**
-   * Delete a receiver
-   * @param {number} id - Receiver ID
+   * Delete a forwarder
+   * @param {number} id - Forwarder ID
    * @returns {boolean} True if deleted
    */
-  deleteReceiver(id) {
-    const stmt = this.db.prepare(`DELETE FROM receivers WHERE id = ?`);
+  deleteForwarder(id) {
+    const stmt = this.db.prepare(`DELETE FROM forwarders WHERE id = ?`);
     const info = stmt.run(id);
     return info.changes > 0;
   }
 
   /**
-   * Toggle receiver enabled state
-   * @param {number} id - Receiver ID
-   * @returns {Object|null} Updated receiver
+   * Toggle forwarder enabled state
+   * @param {number} id - Forwarder ID
+   * @returns {Object|null} Updated forwarder
    */
-  toggleReceiver(id) {
+  toggleForwarder(id) {
     const stmt = this.db.prepare(`
-      UPDATE receivers
+      UPDATE forwarders
       SET enabled = NOT enabled,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     stmt.run(id);
-    return this.getReceiver(id);
+    return this.getForwarder(id);
   }
 
   // ==================== METRICS OPERATIONS ====================
 
   /**
-   * Record metrics for a transmitter
-   * @param {number} transmitterId - Transmitter ID (or null for aggregate)
+   * Record metrics for a listener
+   * @param {number} listenerId - Listener ID (or null for aggregate)
    * @param {Object} metrics - Metrics data
    */
-  recordMetrics(transmitterId, metrics) {
+  recordMetrics(listenerId, metrics) {
     const stmt = this.db.prepare(`
       INSERT INTO metrics_history (
-        transmitter_id, rate, avg_rate, peak_rate, latency,
+        listener_id, rate, avg_rate, peak_rate, latency,
         total, forwarded, dropped, loss_pct
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
-      transmitterId,
+      listenerId,
       metrics.rate || 0,
       metrics.avgRate || 0,
       metrics.peakRate || 0,
@@ -375,18 +375,18 @@ class ProxyDatabase {
 
   /**
    * Get recent metrics history
-   * @param {number|null} transmitterId - Transmitter ID or null for all
+   * @param {number|null} listenerId - Listener ID or null for all
    * @param {number} limit - Number of records to return
    * @returns {Array} Array of metrics records
    */
-  getMetricsHistory(transmitterId = null, limit = 100) {
+  getMetricsHistory(listenerId = null, limit = 100) {
     let query;
     let params;
 
-    if (transmitterId === null) {
+    if (listenerId === null) {
       query = `
         SELECT * FROM metrics_history
-        WHERE transmitter_id IS NULL
+        WHERE listener_id IS NULL
         ORDER BY timestamp DESC
         LIMIT ?
       `;
@@ -394,11 +394,11 @@ class ProxyDatabase {
     } else {
       query = `
         SELECT * FROM metrics_history
-        WHERE transmitter_id = ?
+        WHERE listener_id = ?
         ORDER BY timestamp DESC
         LIMIT ?
       `;
-      params = [transmitterId, limit];
+      params = [listenerId, limit];
     }
 
     return this.db.prepare(query).all(...params);
@@ -406,19 +406,19 @@ class ProxyDatabase {
 
   /**
    * Get metrics for a time range
-   * @param {number|null} transmitterId - Transmitter ID or null for aggregate
+   * @param {number|null} listenerId - Listener ID or null for aggregate
    * @param {Date} startTime - Start time
    * @param {Date} endTime - End time
    * @returns {Array} Array of metrics records
    */
-  getMetricsInRange(transmitterId, startTime, endTime) {
+  getMetricsInRange(listenerId, startTime, endTime) {
     let query;
     let params;
 
-    if (transmitterId === null) {
+    if (listenerId === null) {
       query = `
         SELECT * FROM metrics_history
-        WHERE transmitter_id IS NULL
+        WHERE listener_id IS NULL
           AND timestamp BETWEEN ? AND ?
         ORDER BY timestamp ASC
       `;
@@ -426,11 +426,11 @@ class ProxyDatabase {
     } else {
       query = `
         SELECT * FROM metrics_history
-        WHERE transmitter_id = ?
+        WHERE listener_id = ?
           AND timestamp BETWEEN ? AND ?
         ORDER BY timestamp ASC
       `;
-      params = [transmitterId, startTime.toISOString(), endTime.toISOString()];
+      params = [listenerId, startTime.toISOString(), endTime.toISOString()];
     }
 
     return this.db.prepare(query).all(...params);
@@ -455,11 +455,11 @@ class ProxyDatabase {
   /**
    * Migrate from YAML config to database
    * @param {Object} yamlConfig - Parsed YAML configuration
-   * @returns {Object} Created transmitter and receiver
+   * @returns {Object} Created listener and forwarder
    */
   migrateFromYAML(yamlConfig) {
-    // Create transmitter from YAML udp config
-    const transmitter = this.createTransmitter({
+    // Create listener from YAML udp config
+    const listener = this.createListener({
       name: 'Default',
       enabled: true,
       protocol: 'udp',
@@ -468,9 +468,9 @@ class ProxyDatabase {
       max_message_size: yamlConfig.udp?.max_message_size || 8192
     });
 
-    // Create receiver from YAML tcp config
-    const receiver = this.createReceiver(transmitter.id, {
-      name: 'Default Receiver',
+    // Create forwarder from YAML tcp config
+    const forwarder = this.createForwarder(listener.id, {
+      name: 'Default Forwarder',
       enabled: true,
       protocol: 'tcp',
       host: yamlConfig.tcp?.host || '127.0.0.1',
@@ -481,7 +481,7 @@ class ProxyDatabase {
       connect_timeout: yamlConfig.tcp?.connect_timeout || 5
     });
 
-    return { transmitter, receiver };
+    return { listener, forwarder };
   }
 
   /**
@@ -490,7 +490,7 @@ class ProxyDatabase {
    */
   exportToJSON() {
     return {
-      transmitters: this.getAllTransmitters(),
+      listeners: this.getAllListeners(),
       timestamp: new Date().toISOString()
     };
   }

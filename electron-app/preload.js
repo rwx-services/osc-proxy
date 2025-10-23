@@ -14,22 +14,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadConfig: (configPath) => ipcRenderer.invoke('load-config', configPath),
   saveConfig: (configPath, content) => ipcRenderer.invoke('save-config', configPath, content),
 
-  // Database - Transmitters
-  dbGetTransmitters: () => ipcRenderer.invoke('db-get-transmitters'),
-  dbGetTransmitter: (id) => ipcRenderer.invoke('db-get-transmitter', id),
-  dbGetEnabledTransmitters: () => ipcRenderer.invoke('db-get-enabled-transmitters'),
-  dbCreateTransmitter: (data) => ipcRenderer.invoke('db-create-transmitter', data),
-  dbUpdateTransmitter: (id, data) => ipcRenderer.invoke('db-update-transmitter', id, data),
-  dbDeleteTransmitter: (id) => ipcRenderer.invoke('db-delete-transmitter', id),
-  dbToggleTransmitter: (id) => ipcRenderer.invoke('db-toggle-transmitter', id),
+  // Database - Listeners
+  dbGetListeners: () => ipcRenderer.invoke('db-get-listeners'),
+  dbGetListener: (id) => ipcRenderer.invoke('db-get-listener', id),
+  dbGetEnabledListeners: () => ipcRenderer.invoke('db-get-enabled-listeners'),
+  dbCreateListener: (data) => ipcRenderer.invoke('db-create-listener', data),
+  dbUpdateListener: (id, data) => ipcRenderer.invoke('db-update-listener', id, data),
+  dbDeleteListener: (id) => ipcRenderer.invoke('db-delete-listener', id),
+  dbToggleListener: (id) => ipcRenderer.invoke('db-toggle-listener', id),
 
-  // Database - Receivers
-  dbGetReceivers: (transmitterId) => ipcRenderer.invoke('db-get-receivers', transmitterId),
-  dbGetReceiver: (id) => ipcRenderer.invoke('db-get-receiver', id),
-  dbCreateReceiver: (transmitterId, data) => ipcRenderer.invoke('db-create-receiver', transmitterId, data),
-  dbUpdateReceiver: (id, data) => ipcRenderer.invoke('db-update-receiver', id, data),
-  dbDeleteReceiver: (id) => ipcRenderer.invoke('db-delete-receiver', id),
-  dbToggleReceiver: (id) => ipcRenderer.invoke('db-toggle-receiver', id),
+  // Database - Forwarders
+  dbGetForwarders: (listenerId) => ipcRenderer.invoke('db-get-forwarders', listenerId),
+  dbGetForwarder: (id) => ipcRenderer.invoke('db-get-forwarder', id),
+  dbCreateForwarder: (listenerId, data) => ipcRenderer.invoke('db-create-forwarder', listenerId, data),
+  dbUpdateForwarder: (id, data) => ipcRenderer.invoke('db-update-forwarder', id, data),
+  dbDeleteForwarder: (id) => ipcRenderer.invoke('db-delete-forwarder', id),
+  dbToggleForwarder: (id) => ipcRenderer.invoke('db-toggle-forwarder', id),
 
   // Database - Metrics
   dbGetMetricsHistory: (transmitterId, limit) => ipcRenderer.invoke('db-get-metrics-history', transmitterId, limit),

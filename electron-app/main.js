@@ -339,7 +339,7 @@ function startProxy(configPath = null) {
     ? path.join(process.resourcesPath, 'ruby-proxy', 'bin', 'osc-proxy')
     : path.join(__dirname, '..', 'bin', 'osc-proxy');
 
-  // Use database for multi-transmitter mode
+  // Use database for multi-listener mode
   const dbPath = path.join(app.getPath('userData'), 'proxy.db');
 
   console.log('Starting Ruby proxy:', rubyProxyPath);
@@ -504,8 +504,8 @@ function initializeDatabase() {
   db = new ProxyDatabase(dbPath);
 
   // Check if database is empty and YAML config exists - auto-migrate
-  const transmitters = db.getAllTransmitters();
-  if (transmitters.length === 0 && fs.existsSync(oldConfigPath)) {
+  const listeners = db.getAllListeners();
+  if (listeners.length === 0 && fs.existsSync(oldConfigPath)) {
     console.log('Migrating from YAML config:', oldConfigPath);
     try {
       const yamlContent = fs.readFileSync(oldConfigPath, 'utf8');
@@ -522,127 +522,127 @@ function initializeDatabase() {
 
 // ==================== DATABASE IPC HANDLERS ====================
 
-// Transmitter operations
-ipcMain.handle('db-get-transmitters', async () => {
+// Listener operations
+ipcMain.handle('db-get-listeners', async () => {
   try {
-    return { success: true, data: db.getAllTransmitters() };
+    return { success: true, data: db.getAllListeners() };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-get-transmitter', async (event, id) => {
+ipcMain.handle('db-get-listener', async (event, id) => {
   try {
-    const transmitter = db.getTransmitter(id);
-    return { success: true, data: transmitter };
+    const listener = db.getListener(id);
+    return { success: true, data: listener };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-get-enabled-transmitters', async () => {
+ipcMain.handle('db-get-enabled-listeners', async () => {
   try {
-    return { success: true, data: db.getEnabledTransmitters() };
+    return { success: true, data: db.getEnabledListeners() };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-create-transmitter', async (event, data) => {
+ipcMain.handle('db-create-listener', async (event, data) => {
   try {
-    const transmitter = db.createTransmitter(data);
-    return { success: true, data: transmitter };
+    const listener = db.createListener(data);
+    return { success: true, data: listener };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-update-transmitter', async (event, id, data) => {
+ipcMain.handle('db-update-listener', async (event, id, data) => {
   try {
-    const transmitter = db.updateTransmitter(id, data);
-    return { success: true, data: transmitter };
+    const listener = db.updateListener(id, data);
+    return { success: true, data: listener };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-delete-transmitter', async (event, id) => {
+ipcMain.handle('db-delete-listener', async (event, id) => {
   try {
-    const deleted = db.deleteTransmitter(id);
+    const deleted = db.deleteListener(id);
     return { success: true, data: deleted };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-toggle-transmitter', async (event, id) => {
+ipcMain.handle('db-toggle-listener', async (event, id) => {
   try {
-    const transmitter = db.toggleTransmitter(id);
-    return { success: true, data: transmitter };
+    const listener = db.toggleListener(id);
+    return { success: true, data: listener };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-// Receiver operations
-ipcMain.handle('db-get-receivers', async (event, transmitterId) => {
+// Forwarder operations
+ipcMain.handle('db-get-forwarders', async (event, listenerId) => {
   try {
-    const receivers = db.getReceiversForTransmitter(transmitterId);
-    return { success: true, data: receivers };
+    const forwarders = db.getForwardersForListener(listenerId);
+    return { success: true, data: forwarders };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-get-receiver', async (event, id) => {
+ipcMain.handle('db-get-forwarder', async (event, id) => {
   try {
-    const receiver = db.getReceiver(id);
-    return { success: true, data: receiver };
+    const forwarder = db.getForwarder(id);
+    return { success: true, data: forwarder };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-create-receiver', async (event, transmitterId, data) => {
+ipcMain.handle('db-create-forwarder', async (event, listenerId, data) => {
   try {
-    const receiver = db.createReceiver(transmitterId, data);
-    return { success: true, data: receiver };
+    const forwarder = db.createForwarder(listenerId, data);
+    return { success: true, data: forwarder };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-update-receiver', async (event, id, data) => {
+ipcMain.handle('db-update-forwarder', async (event, id, data) => {
   try {
-    const receiver = db.updateReceiver(id, data);
-    return { success: true, data: receiver };
+    const forwarder = db.updateForwarder(id, data);
+    return { success: true, data: forwarder };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-delete-receiver', async (event, id) => {
+ipcMain.handle('db-delete-forwarder', async (event, id) => {
   try {
-    const deleted = db.deleteReceiver(id);
+    const deleted = db.deleteForwarder(id);
     return { success: true, data: deleted };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('db-toggle-receiver', async (event, id) => {
+ipcMain.handle('db-toggle-forwarder', async (event, id) => {
   try {
-    const receiver = db.toggleReceiver(id);
-    return { success: true, data: receiver };
+    const forwarder = db.toggleForwarder(id);
+    return { success: true, data: forwarder };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
 // Metrics operations
-ipcMain.handle('db-get-metrics-history', async (event, transmitterId, limit) => {
+ipcMain.handle('db-get-metrics-history', async (event, listenerId, limit) => {
   try {
-    const metrics = db.getMetricsHistory(transmitterId, limit);
+    const metrics = db.getMetricsHistory(listenerId, limit);
     return { success: true, data: metrics };
   } catch (err) {
     return { success: false, error: err.message };

@@ -18,7 +18,7 @@ module OSCProxy
       @socket = nil
       @connected = false
 
-      # Per-receiver metrics
+      # Per-forwarder metrics
       @forwarded_count = 0
       @dropped_count = 0
       @failed_count = 0

@@ -1,4 +1,4 @@
-// Renderer process - handles UI updates for multi-transmitter dashboard
+// Renderer process - handles UI updates for multi-listener dashboard
 
 // DOM elements
 const statusIndicator = document.getElementById('status-indicator');
@@ -6,9 +6,9 @@ const statusText = document.getElementById('status-text');
 const startButton = document.getElementById('start-button');
 const stopButton = document.getElementById('stop-button');
 
-// Transmitters container
-const transmittersContainer = document.getElementById('transmitters-container');
-const noTransmitters = document.getElementById('no-transmitters');
+// Listeners container
+const listenersContainer = document.getElementById('listeners-container');
+const noListeners = document.getElementById('no-listeners');
 
 // Aggregate metric displays
 const metricRate = document.getElementById('metric-rate');
@@ -33,8 +33,8 @@ async function init() {
   const state = await window.electronAPI.getProxyState();
   updateProxyState(state);
 
-  // Load transmitters from database to show even when stopped
-  await loadTransmittersFromDatabase();
+  // Load listeners from database to show even when stopped
+  await loadListenersFromDatabase();
 
   // Listen for updates from main process
   window.electronAPI.onMetricsUpdate(updateMetrics);
@@ -61,9 +61,9 @@ async function init() {
   // Listen for settings open command from main process
   window.electronAPI.onShowSettings(() => showView('settings'));
 
-  // Listen for transmitter changes from settings view
-  window.addEventListener('transmitters-changed', () => {
-    loadTransmittersFromDatabase();
+  // Listen for listener changes from settings view
+  window.addEventListener('listeners-changed', () => {
+    loadListenersFromDatabase();
   });
 }
 
@@ -79,8 +79,8 @@ function showView(view) {
     dashboardHeader.classList.remove('hidden');
     settingsHeader.classList.add('hidden');
 
-    // Reload transmitters on dashboard when switching back
-    loadTransmittersFromDatabase();
+    // Reload listeners on dashboard when switching back
+    loadListenersFromDatabase();
   } else if (view === 'settings') {
     dashboard.classList.add('hidden');
     settings.classList.remove('hidden');
@@ -97,29 +97,42 @@ function showView(view) {
 // Expose showView globally for menu commands
 window.showView = showView;
 
-async function loadTransmittersFromDatabase() {
+async function loadListenersFromDatabase() {
   try {
-    const result = await window.electronAPI.dbGetTransmitters();
+    const result = await window.electronAPI.dbGetListeners();
     if (result.success && result.data && result.data.length > 0) {
-      // Show transmitters in idle state
-      const transmitters = result.data.map(tx => ({
-        name: tx.name,
-        protocol: tx.protocol,
-        status: 'idle',
+      // Show listeners in idle/stopped state with their forwarders
+      const listeners = result.data.map(listener => ({
+        name: listener.name,
+        protocol: listener.protocol,
+        status: 'stopped',
         rate: 0,
+        avg_rate: 0,
+        peak_rate: 0,
         latency: 0,
         total: 0,
         forwarded: 0,
         dropped: 0,
-        bind: tx.bind_address,
-        bind_address: tx.bind_address,
-        port: tx.port,
-        receivers_count: tx.receivers ? tx.receivers.length : 0
+        bind: listener.bind_address,
+        bind_address: listener.bind_address,
+        port: listener.port,
+        forwarders: (listener.forwarders || []).map(fwd => ({
+          name: fwd.name,
+          protocol: fwd.protocol,
+          host: fwd.host,
+          port: fwd.port,
+          connected: false,
+          latency: 0,
+          forwarded: 0,
+          dropped: 0,
+          failed: 0
+        })),
+        forwarders_count: listener.forwarders ? listener.forwarders.length : 0
       }));
-      updateTransmitters(transmitters);
+      updateListeners(listeners);
     }
   } catch (error) {
-    console.error('Failed to load transmitters from database:', error);
+    console.error('Failed to load listeners from database:', error);
   }
 }
 
@@ -155,13 +168,13 @@ function updateProxyState(state) {
 }
 
 function updateMetrics(metrics) {
-  // Handle both old single-transmitter format and new multi-transmitter format
-  if (metrics.aggregate && metrics.transmitters) {
-    // New multi-transmitter format
+  // Handle both old single-listener format and new multi-listener format
+  if (metrics.aggregate && metrics.listeners) {
+    // New multi-listener format
     updateAggregateMetrics(metrics.aggregate);
-    updateTransmitters(metrics.transmitters);
+    updateListeners(metrics.listeners);
   } else {
-    // Old single-transmitter format (fallback)
+    // Old single-listener format (fallback)
     updateAggregateMetrics(metrics);
   }
 
@@ -184,88 +197,88 @@ function updateAggregateMetrics(metrics) {
   metricLoss.textContent = formatNumber(metrics.loss_pct || metrics.lossPct || 0, 1);
 }
 
-function updateTransmitters(transmitters) {
-  // Clear existing transmitter cards except the no-transmitters message
-  const existingCards = transmittersContainer.querySelectorAll('.transmitter-card');
+function updateListeners(listeners) {
+  // Clear existing listener cards except the no-listeners message
+  const existingCards = listenersContainer.querySelectorAll('.listener-card');
   existingCards.forEach(card => card.remove());
 
-  if (!transmitters || transmitters.length === 0) {
-    noTransmitters.classList.remove('hidden');
+  if (!listeners || listeners.length === 0) {
+    noListeners.classList.remove('hidden');
     return;
   }
 
-  noTransmitters.classList.add('hidden');
+  noListeners.classList.add('hidden');
 
-  // Adjust grid layout based on transmitter count
-  if (transmitters.length === 1) {
-    transmittersContainer.className = 'grid grid-cols-1 gap-4 mb-6';
+  // Adjust grid layout based on listener count
+  if (listeners.length === 1) {
+    listenersContainer.className = 'grid grid-cols-1 gap-4 mb-6';
   } else {
-    transmittersContainer.className = 'grid grid-cols-2 gap-4 mb-6';
+    listenersContainer.className = 'grid grid-cols-2 gap-4 mb-6';
   }
 
-  // Create a card for each transmitter
-  transmitters.forEach(tx => {
-    const card = createTransmitterCard(tx);
-    transmittersContainer.appendChild(card);
+  // Create a card for each listener
+  listeners.forEach(listener => {
+    const card = createListenerCard(listener);
+    listenersContainer.appendChild(card);
   });
 }
 
-function createTransmitterCard(tx) {
+function createListenerCard(listener) {
   const card = document.createElement('div');
-  card.className = 'transmitter-card metric-card';
+  card.className = 'listener-card metric-card';
 
-  const statusColor = tx.status === 'running' ? 'text-green-400' : 'text-gray-500';
-  const statusIcon = tx.status === 'running' ? 'status-connected' : 'status-idle';
+  const statusColor = listener.status === 'running' ? 'text-green-400' : 'text-gray-500';
+  const statusIcon = listener.status === 'running' ? 'status-connected' : 'status-idle';
 
-  // Transmitter header and metrics
+  // Listener header and metrics
   let html = `
     <div class="flex items-center justify-between mb-4 pb-3 border-b border-proxy-gray-light">
       <div class="flex items-center gap-3">
         <div class="status-indicator ${statusIcon}"></div>
         <div>
-          <h3 class="text-lg font-semibold">${escapeHtml(tx.name || 'Unnamed')}</h3>
+          <h3 class="text-lg font-semibold">${escapeHtml(listener.name || 'Unnamed')}</h3>
           <div class="text-xs text-gray-400 mt-0.5">
-            ${tx.protocol ? tx.protocol.toUpperCase() : 'UDP'} · ${tx.bind_address || '0.0.0.0'}:${tx.port || '-'}
+            ${listener.protocol ? listener.protocol.toUpperCase() : 'UDP'} · ${listener.bind_address || '0.0.0.0'}:${listener.port || '-'}
           </div>
         </div>
       </div>
-      <div class="text-xs ${statusColor} font-medium">${tx.status === 'running' ? 'Running' : 'Stopped'}</div>
+      <div class="text-xs ${statusColor} font-medium">${listener.status === 'running' ? 'Running' : 'Stopped'}</div>
     </div>
 
     <div class="grid grid-cols-5 gap-4 mb-4">
       <div>
         <div class="text-xs text-gray-400">Rate</div>
-        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(tx.rate || 0, 1)}</div>
+        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(listener.rate || 0, 1)}</div>
         <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
         <div class="text-xs text-gray-400">Avg Rate</div>
-        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.avg_rate || 0, 1)}</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(listener.avg_rate || 0, 1)}</div>
         <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
         <div class="text-xs text-gray-400">Peak Rate</div>
-        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.peak_rate || 0, 1)}</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(listener.peak_rate || 0, 1)}</div>
         <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
         <div class="text-xs text-gray-400">Total</div>
-        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.total || 0)}</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(listener.total || 0)}</div>
         <div class="text-xs text-gray-500">messages</div>
       </div>
       <div>
         <div class="text-xs text-gray-400">Forwarded</div>
-        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(tx.forwarded || 0)}</div>
+        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(listener.forwarded || 0)}</div>
         <div class="text-xs text-gray-500">messages</div>
       </div>
     </div>
   `;
 
-  // Receivers table
-  if (tx.receivers && tx.receivers.length > 0) {
+  // Forwarders table
+  if (listener.forwarders && listener.forwarders.length > 0) {
     html += `
       <div class="mt-4">
-        <h4 class="text-sm font-semibold mb-2 text-gray-300">Receivers</h4>
+        <h4 class="text-sm font-semibold mb-2 text-gray-300">Forwarders</h4>
         <div class="overflow-x-auto">
           <table class="w-full text-xs">
             <thead class="text-gray-400 border-b border-proxy-gray-light">
@@ -283,18 +296,18 @@ function createTransmitterCard(tx) {
             <tbody>
     `;
 
-    tx.receivers.forEach(rx => {
-      const connectedColor = rx.connected ? 'text-green-400' : 'text-red-400';
-      const connectedText = rx.connected ? '●' : '○';
+    listener.forwarders.forEach(fwd => {
+      const connectedColor = fwd.connected ? 'text-green-400' : 'text-red-400';
+      const connectedText = fwd.connected ? '●' : '○';
       html += `
               <tr class="border-b border-proxy-gray-light/30 hover:bg-proxy-gray-light/10">
-                <td class="py-2 px-2 font-medium">${escapeHtml(rx.name || 'Unnamed')}</td>
-                <td class="py-2 px-2 text-gray-400">${(rx.protocol || 'udp').toUpperCase()}</td>
-                <td class="py-2 px-2 font-mono text-gray-400">${rx.host}:${rx.port}</td>
-                <td class="py-2 px-2 text-right font-mono">${formatNumber(rx.latency || 0, 2)} ms</td>
-                <td class="py-2 px-2 text-right font-mono text-green-400">${formatNumber(rx.forwarded || 0)}</td>
-                <td class="py-2 px-2 text-right font-mono text-yellow-400">${formatNumber(rx.dropped || 0)}</td>
-                <td class="py-2 px-2 text-right font-mono text-red-400">${formatNumber(rx.failed || 0)}</td>
+                <td class="py-2 px-2 font-medium">${escapeHtml(fwd.name || 'Unnamed')}</td>
+                <td class="py-2 px-2 text-gray-400">${(fwd.protocol || 'udp').toUpperCase()}</td>
+                <td class="py-2 px-2 font-mono text-gray-400">${fwd.host}:${fwd.port}</td>
+                <td class="py-2 px-2 text-right font-mono">${formatNumber(fwd.latency || 0, 2)} ms</td>
+                <td class="py-2 px-2 text-right font-mono text-green-400">${formatNumber(fwd.forwarded || 0)}</td>
+                <td class="py-2 px-2 text-right font-mono text-yellow-400">${formatNumber(fwd.dropped || 0)}</td>
+                <td class="py-2 px-2 text-right font-mono text-red-400">${formatNumber(fwd.failed || 0)}</td>
                 <td class="py-2 px-2 text-center ${connectedColor}">${connectedText}</td>
               </tr>
       `;
@@ -309,7 +322,7 @@ function createTransmitterCard(tx) {
   } else {
     html += `
       <div class="mt-4 text-center py-4 text-gray-500 text-sm border border-proxy-gray-light/30 rounded">
-        No receivers configured
+        No forwarders configured
       </div>
     `;
   }
@@ -349,10 +362,8 @@ function resetMetrics() {
   rateHistory = [];
   rateSparkline.innerHTML = '';
 
-  // Clear transmitter cards
-  const existingCards = transmittersContainer.querySelectorAll('.transmitter-card');
-  existingCards.forEach(card => card.remove());
-  noTransmitters.classList.remove('hidden');
+  // Reload listeners from database in stopped state instead of clearing
+  loadListenersFromDatabase();
 }
 
 function formatNumber(value, decimals = 0) {

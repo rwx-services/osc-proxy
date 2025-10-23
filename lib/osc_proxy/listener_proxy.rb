@@ -7,42 +7,42 @@ require_relative 'udp_sender'
 require_relative 'metrics_logger'
 
 module OSCProxy
-  # TransmitterProxy manages one transmitter (source) with multiple receivers (destinations)
-  # Broadcasts each incoming message to ALL receivers
+  # ListenerProxy manages one listener (source) with multiple forwarders (destinations)
+  # Broadcasts each incoming message to ALL forwarders
   # rubocop:disable Metrics/ClassLength
-  class TransmitterProxy
+  class ListenerProxy
     attr_reader :id, :name, :config, :metrics
 
-    def initialize(transmitter_config, logger:, json_mode: false)
-      @id = transmitter_config[:id]
-      @name = transmitter_config[:name]
-      @config = transmitter_config
+    def initialize(listener_config, logger:, json_mode: false)
+      @id = listener_config[:id]
+      @name = listener_config[:name]
+      @config = listener_config
       @logger = logger
       @json_mode = json_mode
 
       @listener = nil
-      @receivers = []
+      @forwarders = []
       @metrics = MetricsLogger.new(json_mode: json_mode)
       @running = false
       @thread = nil
     end
 
-    # Start the transmitter proxy in a background thread
+    # Start the listener proxy in a background thread
     def start
-      @logger.log(:info, "Starting transmitter: #{@name}")
+      @logger.log(:info, "Starting listener: #{@name}")
 
       # Create listener based on protocol
       @listener = create_listener
       @listener.start
 
-      # Create all receivers
-      @receivers = create_receivers
-      connect_receivers
+      # Create all forwarders
+      @forwarders = create_forwarders
+      connect_forwarders
 
       # Update metrics with connection info
       @metrics.update_connections(
         udp_listener: @config[:protocol] == 'udp' ? @listener : nil,
-        tcp_connection: nil # We have multiple receivers now
+        tcp_connection: nil # We have multiple forwarders now
       )
 
       # Start metrics logging
@@ -51,33 +51,33 @@ module OSCProxy
       # Start processing loop in background thread
       @running = true
       @thread = Thread.new { run_proxy_loop }
-      @thread.name = "transmitter-#{@name}"
+      @thread.name = "listener-#{@name}"
 
-      @logger.log(:info, "Transmitter #{@name} started successfully")
+      @logger.log(:info, "Listener #{@name} started successfully")
       true
     rescue StandardError => e
-      @logger.log(:error, "Failed to start transmitter #{@name}: #{e.message}")
+      @logger.log(:error, "Failed to start listener #{@name}: #{e.message}")
       @logger.log(:error, e.backtrace.join("\n"))
       stop
       false
     end
 
     def stop
-      @logger.log(:info, "Stopping transmitter: #{@name}")
+      @logger.log(:info, "Stopping listener: #{@name}")
       @running = false
       @thread&.join(5) # Wait up to 5 seconds for thread to finish
       @metrics&.stop
       @listener&.stop
-      @receivers.each(&:close)
-      @receivers.clear
-      @logger.log(:info, "Transmitter #{@name} stopped")
+      @forwarders.each(&:close)
+      @forwarders.clear
+      @logger.log(:info, "Listener #{@name} stopped")
     end
 
     def running?
       @running && @thread&.alive?
     end
 
-    # Get current metrics for this transmitter
+    # Get current metrics for this listener
     def current_metrics
       {
         id: @id,
@@ -95,8 +95,8 @@ module OSCProxy
         forwarded: @metrics.total_forwarded,
         dropped: @metrics.total_dropped,
         loss_pct: @metrics.loss_percentage,
-        receivers: @receivers.map { |r| receiver_status(r) },
-        receivers_count: @receivers.length
+        forwarders: @forwarders.map { |f| forwarder_status(f) },
+        forwarders_count: @forwarders.length
       }
     end
 
@@ -123,15 +123,15 @@ module OSCProxy
       end
     end
 
-    def create_receivers
-      @config[:receivers].map do |receiver_config|
-        create_receiver(receiver_config)
+    def create_forwarders
+      @config[:forwarders].map do |forwarder_config|
+        create_forwarder(forwarder_config)
       end
     end
 
     # rubocop:disable Metrics/MethodLength
-    def create_receiver(receiver_config)
-      case receiver_config[:protocol]
+    def create_forwarder(forwarder_config)
+      case forwarder_config[:protocol]
       when 'tcp'
         # Create a simple config object for TCP connection
         tcp_config = Struct.new(
@@ -140,10 +140,10 @@ module OSCProxy
           :reconnect_max_attempts, :reconnect_initial_delay,
           :reconnect_max_delay, :reconnect_backoff_multiplier
         ).new(
-          receiver_config[:keepalive],
-          receiver_config[:keepalive_interval],
-          receiver_config[:nodelay],
-          receiver_config[:connect_timeout],
+          forwarder_config[:keepalive],
+          forwarder_config[:keepalive_interval],
+          forwarder_config[:nodelay],
+          forwarder_config[:connect_timeout],
           -1, # infinite reconnect attempts
           0.1, # initial delay
           5.0, # max delay
@@ -151,27 +151,27 @@ module OSCProxy
         )
 
         TCPConnection.new(
-          host: receiver_config[:host],
-          port: receiver_config[:port],
-          name: receiver_config[:name],
+          host: forwarder_config[:host],
+          port: forwarder_config[:port],
+          name: forwarder_config[:name],
           logger: @logger,
           config: tcp_config
         )
       when 'udp'
         UDPSender.new(
-          host: receiver_config[:host],
-          port: receiver_config[:port],
-          name: receiver_config[:name],
+          host: forwarder_config[:host],
+          port: forwarder_config[:port],
+          name: forwarder_config[:name],
           logger: @logger
         )
       else
-        raise "Unknown receiver protocol: #{receiver_config[:protocol]}"
+        raise "Unknown forwarder protocol: #{forwarder_config[:protocol]}"
       end
     end
     # rubocop:enable Metrics/MethodLength
 
-    def connect_receivers
-      @receivers.each(&:connect)
+    def connect_forwarders
+      @forwarders.each(&:connect)
     end
 
     def run_proxy_loop
@@ -200,18 +200,18 @@ module OSCProxy
     def process_osc_message(data)
       return if data.nil? || data.empty?
 
-      # Broadcast to ALL receivers simultaneously
+      # Broadcast to ALL forwarders simultaneously
       start_time = Time.now
       successful = 0
       failed = 0
 
-      @receivers.each do |receiver|
+      @forwarders.each do |forwarder|
         send_start = Time.now
-        if forward_to_receiver(receiver, data, send_start)
+        if forward_to_forwarder(forwarder, data, send_start)
           successful += 1
         else
           failed += 1
-          receiver.record_drop if receiver.respond_to?(:record_drop)
+          forwarder.record_drop if forwarder.respond_to?(:record_drop)
         end
       end
 
@@ -224,29 +224,29 @@ module OSCProxy
       failed.times { @metrics.record_dropped }
     end
 
-    def forward_to_receiver(receiver, data, send_start)
-      # Ensure receiver is connected
-      unless receiver.connected?
-        receiver.reconnect if receiver.respond_to?(:reconnect)
-        return false unless receiver.connected?
+    def forward_to_forwarder(forwarder, data, send_start)
+      # Ensure forwarder is connected
+      unless forwarder.connected?
+        forwarder.reconnect if forwarder.respond_to?(:reconnect)
+        return false unless forwarder.connected?
       end
 
-      # Calculate latency for this specific receiver
+      # Calculate latency for this specific forwarder
       latency_ms = ((Time.now - send_start) * 1000).round(2)
-      receiver.send_data(data, latency_ms: latency_ms)
+      forwarder.send_data(data, latency_ms: latency_ms)
     end
 
-    def receiver_status(receiver)
+    def forwarder_status(forwarder)
       {
-        name: receiver.name,
-        host: receiver.host,
-        port: receiver.port,
-        protocol: receiver.is_a?(TCPConnection) ? 'tcp' : 'udp',
-        connected: receiver.connected?,
-        latency: receiver.avg_latency_ms,
-        forwarded: receiver.forwarded_count,
-        dropped: receiver.dropped_count,
-        failed: receiver.failed_count
+        name: forwarder.name,
+        host: forwarder.host,
+        port: forwarder.port,
+        protocol: forwarder.is_a?(TCPConnection) ? 'tcp' : 'udp',
+        connected: forwarder.connected?,
+        latency: forwarder.avg_latency_ms,
+        forwarded: forwarder.forwarded_count,
+        dropped: forwarder.dropped_count,
+        failed: forwarder.failed_count
       }
     end
   end

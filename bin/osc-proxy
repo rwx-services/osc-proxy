@@ -14,11 +14,11 @@ options = {}
 OptionParser.new do |opts|
   opts.banner = 'Usage: osc-proxy [options]'
 
-  opts.on('-d', '--database PATH', 'SQLite database path (multi-transmitter mode)') do |path|
+  opts.on('-d', '--database PATH', 'SQLite database path (multi-listener mode)') do |path|
     options[:database] = path
   end
 
-  opts.on('-c', '--config FILE', 'YAML configuration file (single-transmitter mode)') do |file|
+  opts.on('-c', '--config FILE', 'YAML configuration file (single-listener mode)') do |file|
     options[:config] = file
   end
 
@@ -35,10 +35,10 @@ OptionParser.new do |opts|
     puts opts
     puts
     puts 'Examples:'
-    puts '  # Multi-transmitter mode (database):'
+    puts '  # Multi-listener mode (database):'
     puts '  osc-proxy --database ~/proxy.db'
     puts
-    puts '  # Single-transmitter mode (YAML - legacy):'
+    puts '  # Single-listener mode (YAML - legacy):'
     puts '  osc-proxy --config config/lightkey.yml'
     puts
     puts '  # JSON output for Electron integration:'
@@ -51,7 +51,7 @@ end.parse!
 begin
   # Determine which mode to use
   if options[:database]
-    # Multi-transmitter mode
+    # Multi-listener mode
     raise "Database file not found: #{options[:database]}" unless File.exist?(options[:database])
 
     logger = OSCProxy::Logger.new(level: :normal, show_content: false)
@@ -63,7 +63,7 @@ begin
     proxy.start
 
   elsif options[:config]
-    # Single-transmitter mode (legacy YAML)
+    # Single-listener mode (legacy YAML)
     config = OSCProxy::Config.from_file(options[:config])
     config = config.merge('logging' => { 'json_mode' => true }) if options[:json]
     proxy = OSCProxy::Proxy.new(config)

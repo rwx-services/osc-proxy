@@ -84,6 +84,58 @@ module OSCProxy
       end
     end
 
+    # Expose metrics as individual methods for MultiProxy
+    def rate
+      @mutex.synchronize do
+        elapsed = Time.now - @last_display
+        return 0.0 if elapsed.zero?
+
+        (@interval_metrics[:received] / elapsed).round(1)
+      end
+    end
+
+    def avg_rate
+      @mutex.synchronize do
+        calculate_average_rate
+      end
+    end
+
+    def peak_rate
+      @mutex.synchronize do
+        @metrics[:peak_rate]
+      end
+    end
+
+    def latency_ms
+      @mutex.synchronize do
+        calculate_average_latency
+      end
+    end
+
+    def total_received
+      @mutex.synchronize do
+        @metrics[:total_received]
+      end
+    end
+
+    def total_forwarded
+      @mutex.synchronize do
+        @metrics[:total_forwarded]
+      end
+    end
+
+    def total_dropped
+      @mutex.synchronize do
+        @metrics[:total_dropped]
+      end
+    end
+
+    def loss_percentage
+      @mutex.synchronize do
+        calculate_packet_loss_percentage
+      end
+    end
+
     private
 
     def send_immediate_status

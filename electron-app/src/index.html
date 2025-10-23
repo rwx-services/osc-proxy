@@ -41,21 +41,21 @@
     <!-- Dashboard View -->
     <div id="view-dashboard" class="flex-1 overflow-hidden flex flex-col">
       <main class="flex-1 overflow-y-auto p-6">
-        <!-- Transmitters Section -->
+        <!-- Listeners Section -->
         <div class="mb-6">
-          <h2 class="text-lg font-semibold mb-4">Transmitters</h2>
-          <div id="transmitters-container" class="grid grid-cols-2 gap-4 mb-6">
-            <!-- Transmitter cards will be inserted here -->
-            <div class="col-span-2 metric-card text-center py-12" id="no-transmitters">
+          <h2 class="text-lg font-semibold mb-4">Listeners</h2>
+          <div id="listeners-container" class="grid grid-cols-2 gap-4 mb-6">
+            <!-- Listener cards will be inserted here -->
+            <div class="col-span-2 metric-card text-center py-12" id="no-listeners">
               <div class="text-gray-500 mb-4">
                 <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
-                <p class="text-lg font-medium mb-1">No Transmitters Configured</p>
-                <p class="text-sm">Get started by adding your first OSC transmitter</p>
+                <p class="text-lg font-medium mb-1">No Listeners Configured</p>
+                <p class="text-sm">Get started by adding your first OSC listener</p>
               </div>
               <button id="btn-open-settings" class="btn-primary mx-auto">
-                Open Settings to Add Transmitter
+                Open Settings to Add Listener
               </button>
             </div>
           </div>
@@ -120,99 +120,99 @@
     <!-- Settings View -->
     <div id="view-settings" class="flex-1 overflow-hidden hidden">
       <main class="flex-1 overflow-hidden flex h-full">
-        <!-- Left Panel: Transmitters List -->
+        <!-- Left Panel: Listeners List -->
         <div class="w-80 border-r border-proxy-gray-light/30 flex flex-col">
           <div class="p-4 border-b border-proxy-gray-light/30">
             <div class="flex items-center justify-between mb-3">
-              <h2 class="text-lg font-semibold">Transmitters</h2>
-              <button id="btn-add-transmitter" class="btn-primary text-sm px-3 py-1">+ Add</button>
+              <h2 class="text-lg font-semibold">Listeners</h2>
+              <button id="btn-add-listener" class="btn-primary text-sm px-3 py-1">+ Add</button>
             </div>
             <p class="text-xs text-gray-400">Manage OSC input sources</p>
           </div>
 
-          <div id="transmitters-list" class="flex-1 overflow-y-auto p-2">
-            <!-- Transmitter items will be populated here -->
+          <div id="listeners-list" class="flex-1 overflow-y-auto p-2">
+            <!-- Listener items will be populated here -->
           </div>
         </div>
 
-        <!-- Right Panel: Transmitter Details -->
+        <!-- Right Panel: Listener Details -->
         <div class="flex-1 overflow-y-auto p-6">
           <div id="no-selection" class="flex items-center justify-center h-full text-gray-500">
-            Select a transmitter to view details
+            Select a listener to view details
           </div>
 
-          <div id="transmitter-details" class="hidden space-y-6 max-w-3xl">
-            <!-- Transmitter Info -->
+          <div id="listener-details" class="hidden space-y-6 max-w-3xl">
+            <!-- Listener Info -->
             <div class="metric-card">
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Transmitter Configuration</h2>
+                <h2 class="text-lg font-semibold">Listener Configuration</h2>
                 <div class="flex gap-2">
-                  <button id="btn-save-transmitter" class="btn-primary text-sm">Save</button>
-                  <button id="btn-delete-transmitter" class="btn-secondary text-sm text-red-400 hover:text-red-300">Delete</button>
+                  <button id="btn-save-listener" class="btn-primary text-sm">Save</button>
+                  <button id="btn-delete-listener" class="btn-secondary text-sm text-red-400 hover:text-red-300">Delete</button>
                 </div>
               </div>
 
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm text-gray-400 mb-2">Name</label>
-                  <input type="text" id="tx-name" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="e.g., Lightkey Input">
+                  <input type="text" id="listener-name" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="e.g., Lightkey Input">
                 </div>
 
                 <div>
                   <label class="block text-sm text-gray-400 mb-2">Protocol</label>
-                  <select id="tx-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
+                  <select id="listener-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
                     <option value="udp">UDP</option>
                     <option value="tcp">TCP</option>
                   </select>
                 </div>
 
-                <div id="tx-udp-fields">
+                <div id="listener-udp-fields">
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label class="block text-sm text-gray-400 mb-2">Listen Port</label>
-                      <input type="number" id="tx-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21650">
+                      <input type="number" id="listener-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21650">
                     </div>
                     <div>
                       <label class="block text-sm text-gray-400 mb-2">Bind Address</label>
-                      <input type="text" id="tx-bind" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
+                      <input type="text" id="listener-bind" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
                     </div>
                   </div>
                 </div>
 
-                <div id="tx-tcp-fields" class="hidden">
+                <div id="listener-tcp-fields" class="hidden">
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label class="block text-sm text-gray-400 mb-2">Listen Port</label>
-                      <input type="number" id="tx-tcp-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21650">
+                      <input type="number" id="listener-tcp-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21650">
                     </div>
                     <div>
                       <label class="block text-sm text-gray-400 mb-2">Bind Address</label>
-                      <input type="text" id="tx-tcp-bind" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
+                      <input type="text" id="listener-tcp-bind" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
                     </div>
                   </div>
                 </div>
 
                 <div class="flex items-center">
-                  <input type="checkbox" id="tx-enabled" class="mr-2">
-                  <label for="tx-enabled" class="text-sm text-gray-400">Enabled</label>
+                  <input type="checkbox" id="listener-enabled" class="mr-2">
+                  <label for="listener-enabled" class="text-sm text-gray-400">Enabled</label>
                 </div>
               </div>
             </div>
 
-            <!-- Receivers -->
+            <!-- Forwarders -->
             <div class="metric-card">
               <div class="flex items-center justify-between mb-4">
                 <div>
-                  <h2 class="text-lg font-semibold">Receivers</h2>
-                  <p class="text-xs text-gray-400 mt-1">Messages will be broadcast to all receivers</p>
+                  <h2 class="text-lg font-semibold">Forwarders</h2>
+                  <p class="text-xs text-gray-400 mt-1">Messages will be broadcast to all forwarders</p>
                 </div>
-                <button id="btn-add-receiver" class="btn-primary text-sm px-3 py-1">+ Add Receiver</button>
+                <button id="btn-add-forwarder" class="btn-primary text-sm px-3 py-1">+ Add Forwarder</button>
               </div>
 
-              <div id="receivers-list" class="space-y-3"></div>
+              <div id="forwarders-list" class="space-y-3"></div>
 
-              <div id="no-receivers" class="text-center py-8 text-gray-500 text-sm">
-                No receivers configured. Add one to start forwarding messages.
+              <div id="no-forwarders" class="text-center py-8 text-gray-500 text-sm">
+                No forwarders configured. Add one to start forwarding messages.
               </div>
             </div>
           </div>
@@ -220,20 +220,20 @@
       </main>
     </div>
 
-    <!-- Add/Edit Receiver Modal -->
-    <div id="receiver-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <!-- Add/Edit Forwarder Modal -->
+    <div id="forwarder-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-proxy-dark border border-proxy-gray-light rounded-lg p-6 w-full max-w-md">
-        <h3 class="text-lg font-semibold mb-4" id="receiver-modal-title">Add Receiver</h3>
+        <h3 class="text-lg font-semibold mb-4" id="forwarder-modal-title">Add Forwarder</h3>
 
         <div class="space-y-4">
           <div>
             <label class="block text-sm text-gray-400 mb-2">Name</label>
-            <input type="text" id="rx-name" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="e.g., Lightkey Destination">
+            <input type="text" id="fwd-name" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="e.g., Lightkey Destination">
           </div>
 
           <div>
             <label class="block text-sm text-gray-400 mb-2">Protocol</label>
-            <select id="rx-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
+            <select id="fwd-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
               <option value="tcp">TCP</option>
               <option value="udp">UDP</option>
             </select>
@@ -242,23 +242,23 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm text-gray-400 mb-2">Host</label>
-              <input type="text" id="rx-host" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
+              <input type="text" id="fwd-host" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="127.0.0.1">
             </div>
             <div>
               <label class="block text-sm text-gray-400 mb-2">Port</label>
-              <input type="number" id="rx-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21600">
+              <input type="number" id="fwd-port" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent" placeholder="21600">
             </div>
           </div>
 
           <div class="flex items-center">
-            <input type="checkbox" id="rx-enabled" class="mr-2" checked>
-            <label for="rx-enabled" class="text-sm text-gray-400">Enabled</label>
+            <input type="checkbox" id="fwd-enabled" class="mr-2" checked>
+            <label for="fwd-enabled" class="text-sm text-gray-400">Enabled</label>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 mt-6">
-          <button id="btn-cancel-receiver" class="btn-secondary text-sm">Cancel</button>
-          <button id="btn-save-receiver" class="btn-primary text-sm">Save</button>
+          <button id="btn-cancel-forwarder" class="btn-secondary text-sm">Cancel</button>
+          <button id="btn-save-forwarder" class="btn-primary text-sm">Save</button>
         </div>
       </div>
     </div>

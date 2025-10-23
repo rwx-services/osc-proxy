@@ -19,7 +19,7 @@ module OSCProxy
       @attempt_count = 0
       @current_delay = config.reconnect_initial_delay
 
-      # Per-receiver metrics
+      # Per-forwarder metrics
       @forwarded_count = 0
       @dropped_count = 0
       @failed_count = 0
