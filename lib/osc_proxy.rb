@@ -101,8 +101,10 @@ module OSCProxy
 
       forward_message(osc_message, data)
     rescue EOFError => e
-      @logger.error("Incomplete OSC message received (#{data.bytesize} bytes)")
+      hex_preview = data[0, 32].unpack1('H*')
+      @logger.error("Incomplete OSC message received (#{data.bytesize} bytes): #{hex_preview}...")
       @logger.verbose("Error: #{e.message}")
+      @logger.verbose("Full data: #{data.unpack1('H*')}")
     rescue StandardError => e
       @logger.error("Invalid OSC message: #{e.message}")
       @logger.verbose("Data: #{data.unpack1('H*')}")
