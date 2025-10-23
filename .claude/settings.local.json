@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(mkdir:*)",
+      "Bash(bundle exec ruby:*)",
+      "Bash(bundle exec rake test:*)",
+      "Bash(bundle exec rake:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
