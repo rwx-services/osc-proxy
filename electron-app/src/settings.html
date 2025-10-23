@@ -21,106 +21,194 @@
     </header>
 
     <!-- Content -->
-    <main class="flex-1 overflow-y-auto p-6">
-      <div class="max-w-2xl mx-auto space-y-6">
-        <!-- Configuration File -->
-        <div class="metric-card">
-          <h2 class="text-lg font-semibold mb-4">Configuration</h2>
-
-          <div class="mb-4">
-            <label class="block text-sm text-gray-400 mb-2">Config File</label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                id="config-path"
-                value="../config/lightkey.yml"
-                class="flex-1 bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-proxy-accent"
-                placeholder="Path to config file"
-              >
-              <button id="btn-load-config" class="btn-secondary">Load</button>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="block text-sm text-gray-400 mb-2">YAML Configuration</label>
-            <textarea
-              id="config-editor"
-              rows="12"
-              class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-proxy-accent"
-              placeholder="udp:
-  port: 21650
-  bind: '127.0.0.1'
-
-tcp:
-  host: '127.0.0.1'
-  port: 21600"
-            ></textarea>
-          </div>
-
-          <div class="flex justify-end gap-2">
-            <button id="btn-save-config" class="btn-primary">
-              Save Configuration
+    <main class="flex-1 overflow-hidden flex">
+      <!-- Left Panel: Transmitters List -->
+      <div class="w-80 border-r border-proxy-gray-light/30 flex flex-col">
+        <div class="p-4 border-b border-proxy-gray-light/30">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Transmitters</h2>
+            <button id="btn-add-transmitter" class="btn-primary text-sm px-3 py-1">
+              + Add
             </button>
           </div>
+          <p class="text-xs text-gray-400">Manage OSC input sources</p>
         </div>
 
-        <!-- Quick Settings -->
-        <div class="metric-card">
-          <h2 class="text-lg font-semibold mb-4">Quick Settings</h2>
+        <div id="transmitters-list" class="flex-1 overflow-y-auto p-2">
+          <!-- Transmitter items will be populated here -->
+        </div>
+      </div>
 
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">UDP Listen Port</label>
-              <input
-                type="number"
-                id="udp-port"
-                value="21650"
-                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
-              >
+      <!-- Right Panel: Transmitter Details -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <div id="no-selection" class="flex items-center justify-center h-full text-gray-500">
+          Select a transmitter to view details
+        </div>
+
+        <div id="transmitter-details" class="hidden space-y-6 max-w-3xl">
+          <!-- Transmitter Info -->
+          <div class="metric-card">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold">Transmitter Configuration</h2>
+              <div class="flex gap-2">
+                <button id="btn-save-transmitter" class="btn-primary text-sm">Save</button>
+                <button id="btn-delete-transmitter" class="btn-secondary text-sm text-red-400 hover:text-red-300">Delete</button>
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">TCP Destination Host</label>
-              <input
-                type="text"
-                id="tcp-host"
-                value="127.0.0.1"
-                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
-              >
-            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Name</label>
+                <input
+                  type="text"
+                  id="tx-name"
+                  class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                  placeholder="e.g., Lightkey Input"
+                >
+              </div>
 
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">TCP Destination Port</label>
-              <input
-                type="number"
-                id="tcp-port"
-                value="21600"
-                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
-              >
-            </div>
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">Protocol</label>
+                <select id="tx-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
+                  <option value="udp">UDP</option>
+                  <option value="tcp">TCP</option>
+                </select>
+              </div>
 
-            <div class="flex justify-end">
-              <button id="btn-apply-quick" class="btn-secondary">
-                Apply to Config
-              </button>
+              <div id="tx-udp-fields">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Listen Port</label>
+                    <input
+                      type="number"
+                      id="tx-port"
+                      class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                      placeholder="21650"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Bind Address</label>
+                    <input
+                      type="text"
+                      id="tx-bind"
+                      class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                      placeholder="127.0.0.1"
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <div id="tx-tcp-fields" class="hidden">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Listen Port</label>
+                    <input
+                      type="number"
+                      id="tx-tcp-port"
+                      class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                      placeholder="21650"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm text-gray-400 mb-2">Bind Address</label>
+                    <input
+                      type="text"
+                      id="tx-tcp-bind"
+                      class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                      placeholder="127.0.0.1"
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center">
+                <input type="checkbox" id="tx-enabled" class="mr-2">
+                <label for="tx-enabled" class="text-sm text-gray-400">Enabled</label>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- About -->
-        <div class="metric-card">
-          <h2 class="text-lg font-semibold mb-4">About</h2>
-          <div class="text-sm text-gray-400 space-y-2">
-            <p><strong class="text-white">OSC Proxy</strong> v1.0.0</p>
-            <p>Forward OSC messages from UDP to TCP with SLIP framing for Lightkey</p>
-            <p class="text-xs text-gray-500 mt-4">
-              Built with Electron and Ruby<br>
-              © 2025 Your Name
-            </p>
+          <!-- Receivers -->
+          <div class="metric-card">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-lg font-semibold">Receivers</h2>
+                <p class="text-xs text-gray-400 mt-1">Messages will be broadcast to all receivers</p>
+              </div>
+              <button id="btn-add-receiver" class="btn-primary text-sm px-3 py-1">
+                + Add Receiver
+              </button>
+            </div>
+
+            <div id="receivers-list" class="space-y-3">
+              <!-- Receiver items will be populated here -->
+            </div>
+
+            <div id="no-receivers" class="text-center py-8 text-gray-500 text-sm">
+              No receivers configured. Add one to start forwarding messages.
+            </div>
           </div>
         </div>
       </div>
     </main>
+
+    <!-- Add/Edit Receiver Modal -->
+    <div id="receiver-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div class="bg-proxy-dark border border-proxy-gray-light rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-lg font-semibold mb-4" id="receiver-modal-title">Add Receiver</h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Name</label>
+            <input
+              type="text"
+              id="rx-name"
+              class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+              placeholder="e.g., Lightkey Destination"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Protocol</label>
+            <select id="rx-protocol" class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent">
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Host</label>
+              <input
+                type="text"
+                id="rx-host"
+                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                placeholder="127.0.0.1"
+              >
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Port</label>
+              <input
+                type="number"
+                id="rx-port"
+                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                placeholder="21600"
+              >
+            </div>
+          </div>
+
+          <div class="flex items-center">
+            <input type="checkbox" id="rx-enabled" class="mr-2" checked>
+            <label for="rx-enabled" class="text-sm text-gray-400">Enabled</label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6">
+          <button id="btn-cancel-receiver" class="btn-secondary text-sm">Cancel</button>
+          <button id="btn-save-receiver" class="btn-primary text-sm">Save</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="./js/settings.js"></script>
