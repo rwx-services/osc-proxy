@@ -67,7 +67,7 @@ module OSCProxy
           options['udp']['bind'] = addr
         end
 
-        opts.on('-h', '--tcp-host HOST', 'TCP destination host') do |host|
+        opts.on('-H', '--tcp-host HOST', 'TCP destination host') do |host|
           options['tcp'] ||= {}
           options['tcp']['host'] = host
         end
@@ -87,7 +87,7 @@ module OSCProxy
           exit
         end
 
-        opts.on('--help', 'Show this help message') do
+        opts.on('-h', '--help', 'Show this help message') do
           puts opts
           exit
         end

@@ -95,9 +95,13 @@ bin/osc-proxy --udp-port 8000 --tcp-host 192.168.1.100 --tcp-port 9000
 bin/osc-proxy --config config.yml --tcp-host 10.0.0.50
 
 # Show help
+bin/osc-proxy -h
+# or
 bin/osc-proxy --help
 
 # Show version
+bin/osc-proxy -v
+# or
 bin/osc-proxy --version
 ```
 
