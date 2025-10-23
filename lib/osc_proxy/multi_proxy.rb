@@ -9,10 +9,11 @@ module OSCProxy
   # MultiProxy orchestrates multiple ListenerProxy instances
   # Loads configuration from SQLite database and manages lifecycle
   class MultiProxy
-    def initialize(database_path, logger: nil, json_mode: false)
+    def initialize(database_path, logger: nil, json_mode: false, listener_id: nil)
       @database_path = database_path
       @logger = logger || Logger.new(level: :normal, show_content: false)
       @json_mode = json_mode
+      @listener_id = listener_id # Optional: if set, only load this specific listener
       @listener_proxies = []
       @running = false
       @metrics_thread = nil
@@ -37,6 +38,10 @@ module OSCProxy
       @metrics_thread = Thread.new { metrics_output_loop } if @json_mode
       @metrics_thread.name = 'metrics-output' if @metrics_thread
 
+      # Start stdin command listener for individual listener control
+      @command_thread = Thread.new { command_listener_loop }
+      @command_thread.name = 'command-listener'
+
       @logger.log(:info, "MultiProxy started with #{@listener_proxies.length} listener(s)")
 
       # Set up signal handlers
@@ -57,6 +62,7 @@ module OSCProxy
       @logger.log(:info, 'MultiProxy stopping...')
       @running = false
       @metrics_thread&.join(2)
+      @command_thread&.join(2)
       @listener_proxies.each(&:stop)
       @logger.log(:info, 'MultiProxy stopped')
     end
@@ -68,10 +74,16 @@ module OSCProxy
       db = SQLite3::Database.new(@database_path)
       db.results_as_hash = true
 
-      # Get all enabled listeners
-      listeners = db.execute(<<~SQL)
-        SELECT * FROM listeners WHERE enabled = 1 ORDER BY name
-      SQL
+      # Get all enabled listeners (or just the specified one)
+      listeners = if @listener_id
+                    db.execute(<<~SQL, @listener_id)
+                      SELECT * FROM listeners WHERE id = ? ORDER BY name
+                    SQL
+                  else
+                    db.execute(<<~SQL)
+                      SELECT * FROM listeners WHERE enabled = 1 ORDER BY name
+                    SQL
+                  end
 
       @logger.log(:info, "Found #{listeners.length} enabled listener(s)")
 
@@ -194,6 +206,63 @@ module OSCProxy
       }
     end
     # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
+
+    def command_listener_loop
+      while @running
+        ready = IO.select([$stdin], nil, nil, 1)
+        next unless ready
+
+        line = $stdin.gets
+        break unless line
+
+        handle_command(line.strip)
+      end
+    rescue StandardError => e
+      @logger.log(:error, "Command listener error: #{e.message}")
+    end
+
+    def handle_command(command)
+      parts = command.split(' ', 2)
+      action = parts[0]
+      listener_id = parts[1]&.to_i
+
+      case action
+      when 'start'
+        start_listener(listener_id) if listener_id
+      when 'stop'
+        stop_listener(listener_id) if listener_id
+      else
+        @logger.log(:warn, "Unknown command: #{command}")
+      end
+    end
+
+    def start_listener(listener_id)
+      proxy = @listener_proxies.find { |p| p.current_metrics[:id] == listener_id }
+      if proxy
+        if proxy.running?
+          @logger.log(:warn, "Listener #{listener_id} is already running")
+        else
+          proxy.start
+          @logger.log(:info, "Started listener #{listener_id}")
+        end
+      else
+        @logger.log(:error, "Listener #{listener_id} not found")
+      end
+    end
+
+    def stop_listener(listener_id)
+      proxy = @listener_proxies.find { |p| p.current_metrics[:id] == listener_id }
+      if proxy
+        if proxy.running?
+          proxy.stop
+          @logger.log(:info, "Stopped listener #{listener_id}")
+        else
+          @logger.log(:warn, "Listener #{listener_id} is already stopped")
+        end
+      else
+        @logger.log(:error, "Listener #{listener_id} not found")
+      end
+    end
 
     def shutdown
       stop

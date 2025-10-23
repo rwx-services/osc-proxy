@@ -18,6 +18,10 @@ OptionParser.new do |opts|
     options[:database] = path
   end
 
+  opts.on('-l', '--listener ID', 'Start only the specified listener ID (requires --database)') do |id|
+    options[:listener_id] = id.to_i
+  end
+
   opts.on('-c', '--config FILE', 'YAML configuration file (single-listener mode)') do |file|
     options[:config] = file
   end
@@ -58,7 +62,8 @@ begin
     proxy = OSCProxy::MultiProxy.new(
       options[:database],
       logger: logger,
-      json_mode: options[:json] || false
+      json_mode: options[:json] || false,
+      listener_id: options[:listener_id]
     )
     proxy.start
 

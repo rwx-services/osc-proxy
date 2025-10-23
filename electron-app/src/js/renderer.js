@@ -103,6 +103,7 @@ async function loadListenersFromDatabase() {
     if (result.success && result.data && result.data.length > 0) {
       // Show listeners in idle/stopped state with their forwarders
       const listeners = result.data.map(listener => ({
+        id: listener.id,
         name: listener.name,
         protocol: listener.protocol,
         status: 'stopped',
@@ -242,7 +243,12 @@ function createListenerCard(listener) {
           </div>
         </div>
       </div>
-      <div class="text-xs ${statusColor} font-medium">${listener.status === 'running' ? 'Running' : 'Stopped'}</div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs ${statusColor} font-medium">${listener.status === 'running' ? 'Running' : 'Stopped'}</div>
+        <button class="listener-toggle-btn px-3 py-1 text-xs font-medium rounded transition-colors ${listener.status === 'running' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white" data-listener-id="${listener.id || listener.name}">
+          ${listener.status === 'running' ? 'Stop' : 'Start'}
+        </button>
+      </div>
     </div>
 
     <div class="grid grid-cols-5 gap-4 mb-4">
@@ -328,6 +334,50 @@ function createListenerCard(listener) {
   }
 
   card.innerHTML = html;
+
+  // Add event listener for toggle button
+  const toggleBtn = card.querySelector('.listener-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', async () => {
+      const listenerId = toggleBtn.getAttribute('data-listener-id');
+      const isRunning = listener.status === 'running';
+
+      console.log(`Toggle clicked for listener ${listenerId}, current status: ${listener.status}, isRunning: ${isRunning}`);
+
+      try {
+        if (isRunning) {
+          console.log(`Calling stopListener(${listenerId})`);
+          const result = await window.electronAPI.stopListener(listenerId);
+          console.log('Stop result:', result);
+
+          if (result.success) {
+            // Update UI optimistically - metrics will update it if proxy is running
+            listener.status = 'stopped';
+            const statusEl = card.querySelector('.text-xs.font-medium');
+            if (statusEl) statusEl.textContent = 'Stopped';
+            toggleBtn.textContent = 'Start';
+            toggleBtn.className = 'listener-toggle-btn px-3 py-1 text-xs font-medium rounded transition-colors bg-green-600 hover:bg-green-700 text-white';
+          }
+        } else {
+          console.log(`Calling startListener(${listenerId})`);
+          const result = await window.electronAPI.startListener(listenerId);
+          console.log('Start result:', result);
+
+          if (result.success) {
+            // Update UI optimistically - metrics will update it if proxy is running
+            listener.status = 'running';
+            const statusEl = card.querySelector('.text-xs.font-medium');
+            if (statusEl) statusEl.textContent = 'Running';
+            toggleBtn.textContent = 'Stop';
+            toggleBtn.className = 'listener-toggle-btn px-3 py-1 text-xs font-medium rounded transition-colors bg-red-600 hover:bg-red-700 text-white';
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to ${isRunning ? 'stop' : 'start'} listener:`, error);
+      }
+    });
+  }
+
   return card;
 }
 

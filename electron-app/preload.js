@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProxyState: () => ipcRenderer.invoke('get-proxy-state'),
   startProxy: (configPath) => ipcRenderer.invoke('start-proxy', configPath),
   stopProxy: () => ipcRenderer.invoke('stop-proxy'),
+  startListener: (listenerId) => ipcRenderer.invoke('start-listener', listenerId),
+  stopListener: (listenerId) => ipcRenderer.invoke('stop-listener', listenerId),
 
   // Settings
   openSettings: () => ipcRenderer.invoke('open-settings'),

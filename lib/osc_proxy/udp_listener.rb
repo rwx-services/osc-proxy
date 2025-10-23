@@ -14,6 +14,7 @@ module OSCProxy
 
     def start
       @socket = UDPSocket.new
+      @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
       @socket.bind(@bind, @port)
     rescue StandardError => e
       raise "Failed to start UDP listener: #{e.message}"

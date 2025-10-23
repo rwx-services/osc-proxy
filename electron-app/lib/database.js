@@ -205,6 +205,23 @@ class ProxyDatabase {
     return this.getListener(id);
   }
 
+  /**
+   * Set listener enabled state
+   * @param {number} id - Listener ID
+   * @param {boolean} enabled - Enabled state
+   * @returns {Object|null} Updated listener
+   */
+  setListenerEnabled(id, enabled) {
+    const stmt = this.db.prepare(`
+      UPDATE listeners
+      SET enabled = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(enabled ? 1 : 0, id);
+    return this.getListener(id);
+  }
+
   // ==================== FORWARDER OPERATIONS ====================
 
   /**

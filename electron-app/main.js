@@ -12,7 +12,8 @@ let mainWindow = null;
 let settingsWindow = null;
 let activityLogWindow = null;
 let tray = null;
-let proxyProcess = null;
+let proxyProcess = null; // Legacy: used for "Start All" / "Stop All"
+let listenerProcesses = new Map(); // Track individual listener processes by ID
 let db = null;
 
 // Keep track of proxy state
@@ -348,7 +349,7 @@ function startProxy(configPath = null) {
   const args = ['--database', dbPath, '--json'];
 
   proxyProcess = spawn('ruby', [rubyProxyPath, ...args], {
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe']  // Enable stdin for sending commands
   });
 
   proxyState.running = true;
@@ -429,6 +430,85 @@ function stopProxy() {
   }, 5000);
 }
 
+function startIndividualListener(listenerId) {
+  // Check if this listener is already running
+  if (listenerProcesses.has(listenerId)) {
+    console.log(`Listener ${listenerId} is already running`);
+    return;
+  }
+
+  const isProduction = app.isPackaged;
+  const rubyProxyPath = isProduction
+    ? path.join(process.resourcesPath, 'ruby-proxy', 'bin', 'osc-proxy')
+    : path.join(__dirname, '..', 'bin', 'osc-proxy');
+
+  const dbPath = path.join(app.getPath('userData'), 'proxy.db');
+
+  console.log(`Starting listener ${listenerId}...`);
+
+  const args = ['--database', dbPath, '--listener', String(listenerId), '--json'];
+
+  const listenerProcess = spawn('ruby', [rubyProxyPath, ...args], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  listenerProcesses.set(listenerId, listenerProcess);
+
+  // Handle JSON metrics output
+  let buffer = '';
+  listenerProcess.stdout.on('data', (data) => {
+    buffer += data.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    lines.forEach(line => {
+      line = line.trim();
+      if (!line) return;
+
+      try {
+        const metrics = JSON.parse(line);
+        // Send metrics update with listener-specific data
+        sendToRenderer('metrics-update', metrics);
+      } catch (e) {
+        console.log(`Listener ${listenerId} output:`, line);
+      }
+    });
+  });
+
+  listenerProcess.stderr.on('data', (data) => {
+    console.error(`Listener ${listenerId} error:`, data.toString());
+  });
+
+  listenerProcess.on('close', (code) => {
+    console.log(`Listener ${listenerId} process exited with code ${code}`);
+    listenerProcesses.delete(listenerId);
+    // Update UI to show listener stopped
+    // We could send a specific event here if needed
+  });
+
+  listenerProcess.on('error', (err) => {
+    console.error(`Failed to start listener ${listenerId}:`, err);
+    listenerProcesses.delete(listenerId);
+  });
+}
+
+function stopIndividualListener(listenerId) {
+  const listenerProcess = listenerProcesses.get(listenerId);
+  if (!listenerProcess) {
+    console.log(`Listener ${listenerId} is not running`);
+    return;
+  }
+
+  console.log(`Stopping listener ${listenerId}...`);
+  listenerProcess.kill('SIGTERM');
+
+  setTimeout(() => {
+    if (listenerProcesses.has(listenerId)) {
+      listenerProcesses.get(listenerId).kill('SIGKILL');
+    }
+  }, 5000);
+}
+
 function sendToRenderer(channel, data) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, data);
@@ -454,6 +534,34 @@ ipcMain.handle('start-proxy', (event, configPath) => {
 ipcMain.handle('stop-proxy', () => {
   stopProxy();
   return { success: true };
+});
+
+ipcMain.handle('start-listener', async (event, listenerId) => {
+  try {
+    // Start the individual listener process
+    // NOTE: This does NOT modify the database enabled flag
+    // Individual controls are in-memory only
+    startIndividualListener(listenerId);
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to start listener ${listenerId}:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('stop-listener', async (event, listenerId) => {
+  try {
+    // Stop the individual listener process
+    // NOTE: This does NOT modify the database enabled flag
+    // Individual controls are in-memory only
+    stopIndividualListener(listenerId);
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to stop listener ${listenerId}:`, error);
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle('open-settings', () => {
