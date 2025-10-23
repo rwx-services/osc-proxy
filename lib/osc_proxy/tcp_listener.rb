@@ -28,8 +28,7 @@ module OSCProxy
     def receive(timeout: 1.0)
       # Accept new connection if we don't have one
       unless @client_socket
-        readable = IO.select([@server_socket], nil, nil, timeout)
-        return nil unless readable
+        return nil unless @server_socket.wait_readable(timeout)
 
         @client_socket = @server_socket.accept
         @buffer.clear
@@ -38,11 +37,11 @@ module OSCProxy
 
       # Read data from client
       loop do
-        readable = IO.select([@client_socket], nil, nil, timeout)
-        unless readable
+        unless @client_socket.wait_readable(timeout)
           # Timeout - check if we have a complete message in buffer
           message = extract_slip_message
           return message if message
+
           return nil
         end
 
@@ -53,7 +52,6 @@ module OSCProxy
           # Try to extract a complete SLIP message
           message = extract_slip_message
           return message if message
-
         rescue EOFError, Errno::ECONNRESET
           # Client disconnected
           @logger.log(:info, 'TCP client disconnected')

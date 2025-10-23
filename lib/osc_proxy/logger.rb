@@ -15,6 +15,7 @@ module OSCProxy
     end
 
     # Generic log method that routes to appropriate level
+    # rubocop:disable Lint/DuplicateBranch
     def log(level, message)
       case level
       when :info
@@ -31,6 +32,7 @@ module OSCProxy
         info(message) # Default to info
       end
     end
+    # rubocop:enable Lint/DuplicateBranch
 
     def info(message)
       return unless @level >= LEVELS[:normal]

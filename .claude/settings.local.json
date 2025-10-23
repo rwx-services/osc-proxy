@@ -8,7 +8,14 @@
       "Bash(bundle exec rake:*)",
       "Bash(bin/rake test:*)",
       "Bash(bin/rake:*)",
-      "Bash(bundle exec rubocop:*)"
+      "Bash(bundle exec rubocop:*)",
+      "Bash(timeout 3 ruby:*)",
+      "Bash(node:*)",
+      "Bash(NODE_ENV=development npm start)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Read(//Users/blueninja/projects/**)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

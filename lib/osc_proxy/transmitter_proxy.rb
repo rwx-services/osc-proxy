@@ -9,6 +9,7 @@ require_relative 'metrics_logger'
 module OSCProxy
   # TransmitterProxy manages one transmitter (source) with multiple receivers (destinations)
   # Broadcasts each incoming message to ALL receivers
+  # rubocop:disable Metrics/ClassLength
   class TransmitterProxy
     attr_reader :id, :name, :config, :metrics
 
@@ -125,6 +126,7 @@ module OSCProxy
       end
     end
 
+    # rubocop:disable Metrics/MethodLength
     def create_receiver(receiver_config)
       case receiver_config[:protocol]
       when 'tcp'
@@ -161,19 +163,16 @@ module OSCProxy
         raise "Unknown receiver protocol: #{receiver_config[:protocol]}"
       end
     end
+    # rubocop:enable Metrics/MethodLength
 
     def connect_receivers
-      @receivers.each do |receiver|
-        receiver.connect
-      end
+      @receivers.each(&:connect)
     end
 
     def run_proxy_loop
       @logger.log(:info, "#{@name}: Proxy loop started")
 
-      while @running
-        handle_incoming_message
-      end
+      handle_incoming_message while @running
 
       @logger.log(:info, "#{@name}: Proxy loop stopped")
     rescue StandardError => e
@@ -213,9 +212,7 @@ module OSCProxy
       latency_ms = ((Time.now - start_time) * 1000).round(2)
 
       # Record metrics
-      if successful.positive?
-        @metrics.record_forwarded(latency_ms)
-      end
+      @metrics.record_forwarded(latency_ms) if successful.positive?
 
       failed.times { @metrics.record_dropped }
     end
@@ -239,4 +236,5 @@ module OSCProxy
       }
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

@@ -116,13 +116,12 @@ module OSCProxy
 
       if @json_mode
         @output.puts format_stats_json(stats)
-        @output.flush
       else
         # Clear line and move cursor up to overwrite previous stats
         print "\r\033[K"
         @output.print format_stats(stats)
-        @output.flush
       end
+      @output.flush
     end
 
     def calculate_stats(elapsed)
@@ -211,25 +210,31 @@ module OSCProxy
       }.to_json
     end
 
+    # rubocop:disable Naming/AccessorMethodName
     def get_connection_info
       udp = @connections[:udp_listener]
       tcp = @connections[:tcp_connection]
 
       {
-        inbound: udp ? {
-          type: 'UDP',
-          bind: udp.instance_variable_get(:@bind),
-          port: udp.instance_variable_get(:@port),
-          status: 'listening'
-        } : nil,
-        outbound: tcp ? {
-          type: 'TCP',
-          host: tcp.instance_variable_get(:@host),
-          port: tcp.instance_variable_get(:@port),
-          status: tcp.connected? ? 'connected' : 'disconnected'
-        } : nil
+        inbound: if udp
+                   {
+                     type: 'UDP',
+                     bind: udp.instance_variable_get(:@bind),
+                     port: udp.instance_variable_get(:@port),
+                     status: 'listening'
+                   }
+                 end,
+        outbound: if tcp
+                    {
+                      type: 'TCP',
+                      host: tcp.instance_variable_get(:@host),
+                      port: tcp.instance_variable_get(:@port),
+                      status: tcp.connected? ? 'connected' : 'disconnected'
+                    }
+                  end
       }
     end
+    # rubocop:enable Naming/AccessorMethodName
 
     def display_final_stats
       @output.puts "\n"

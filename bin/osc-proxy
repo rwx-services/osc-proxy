@@ -10,6 +10,7 @@ require_relative '../lib/osc_proxy/multi_proxy'
 
 # Parse CLI options
 options = {}
+# rubocop:disable Metrics/BlockLength
 OptionParser.new do |opts|
   opts.banner = 'Usage: osc-proxy [options]'
 
@@ -45,14 +46,13 @@ OptionParser.new do |opts|
     exit
   end
 end.parse!
+# rubocop:enable Metrics/BlockLength
 
 begin
   # Determine which mode to use
   if options[:database]
     # Multi-transmitter mode
-    unless File.exist?(options[:database])
-      raise "Database file not found: #{options[:database]}"
-    end
+    raise "Database file not found: #{options[:database]}" unless File.exist?(options[:database])
 
     logger = OSCProxy::Logger.new(level: :normal, show_content: false)
     proxy = OSCProxy::MultiProxy.new(
@@ -75,7 +75,6 @@ begin
     puts 'Run with --help for usage information'
     exit 1
   end
-
 rescue StandardError => e
   warn "Error: #{e.message}"
   warn e.backtrace.join("\n") if ENV['DEBUG']

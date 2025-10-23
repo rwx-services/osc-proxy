@@ -63,6 +63,7 @@ module OSCProxy
 
     private
 
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Metrics/BlockLength
     def load_transmitters
       db = SQLite3::Database.new(@database_path)
       db.results_as_hash = true
@@ -116,6 +117,7 @@ module OSCProxy
       @logger.log(:error, "Database error: #{e.message}")
       raise
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength, Metrics/BlockLength
 
     def setup_signal_handlers
       %w[INT TERM].each do |signal|
@@ -129,9 +131,7 @@ module OSCProxy
 
     def wait_for_transmitters
       # Wait for all transmitter threads to finish (or until stopped)
-      while @running && @transmitter_proxies.any?(&:running?)
-        sleep 1
-      end
+      sleep 1 while @running && @transmitter_proxies.any?(&:running?)
     end
 
     def metrics_output_loop
@@ -154,6 +154,7 @@ module OSCProxy
       $stdout.flush
     end
 
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def aggregate_metrics
       total_rate = 0.0
       total_avg_rate = 0.0
@@ -169,7 +170,7 @@ module OSCProxy
         total_rate += m[:rate]
         total_avg_rate += m[:avg_rate]
         max_peak_rate = [max_peak_rate, m[:peak_rate]].max
-        if m[:latency] > 0
+        if m[:latency].positive?
           total_latency += m[:latency]
           active_count += 1
         end
@@ -192,6 +193,7 @@ module OSCProxy
         lossPct: loss_pct
       }
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def shutdown
       stop
