@@ -45,6 +45,14 @@ async function init() {
   stopButton.addEventListener('click', async () => {
     await window.electronAPI.stopProxy();
   });
+
+  // Open settings button (in empty state)
+  const openSettingsBtn = document.getElementById('btn-open-settings');
+  if (openSettingsBtn) {
+    openSettingsBtn.addEventListener('click', () => {
+      window.electronAPI.openSettings();
+    });
+  }
 }
 
 function updateProxyState(state) {

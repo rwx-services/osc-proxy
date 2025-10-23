@@ -33,8 +33,17 @@
         <h2 class="text-lg font-semibold mb-4">Transmitters</h2>
         <div id="transmitters-container" class="grid grid-cols-2 gap-4 mb-6">
           <!-- Transmitter cards will be inserted here -->
-          <div class="col-span-2 text-center py-8 text-gray-500 text-sm" id="no-transmitters">
-            No active transmitters
+          <div class="col-span-2 metric-card text-center py-12" id="no-transmitters">
+            <div class="text-gray-500 mb-4">
+              <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              <p class="text-lg font-medium mb-1">No Transmitters Configured</p>
+              <p class="text-sm">Get started by adding your first OSC transmitter</p>
+            </div>
+            <button id="btn-open-settings" class="btn-primary mx-auto">
+              Open Settings to Add Transmitter
+            </button>
           </div>
         </div>
       </div>
