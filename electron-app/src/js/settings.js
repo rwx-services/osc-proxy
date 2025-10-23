@@ -136,7 +136,7 @@ async function selectTransmitter(id) {
   // Populate form
   txName.value = tx.name;
   txProtocol.value = tx.protocol;
-  txEnabled.checked = tx.enabled === 1;
+  txEnabled.checked = !!tx.enabled; // Convert to boolean
 
   txPort.value = tx.port || '';
   txBind.value = tx.bind_address || '127.0.0.1';
@@ -317,7 +317,7 @@ window.editReceiver = async function(id) {
       rxProtocol.value = receiver.protocol;
       rxHost.value = receiver.host;
       rxPort.value = receiver.port;
-      rxEnabled.checked = receiver.enabled === 1;
+      rxEnabled.checked = !!receiver.enabled; // Convert to boolean
       receiverModal.classList.remove('hidden');
     }
   } catch (error) {
