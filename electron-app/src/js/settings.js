@@ -231,15 +231,25 @@ async function deleteTransmitter() {
 async function loadReceivers(transmitterId) {
   try {
     const result = await window.electronAPI.dbGetReceivers(transmitterId);
+    console.log('loadReceivers result:', result);
     const receivers = result.success ? result.data : [];
+    console.log('receivers array:', receivers);
     renderReceivers(receivers);
   } catch (error) {
+    console.error('loadReceivers error:', error);
     showNotification('Failed to load receivers: ' + error.message, 'error');
+    renderReceivers([]); // Render empty list on error
   }
 }
 
 function renderReceivers(receivers) {
   receiversList.innerHTML = '';
+
+  // Ensure receivers is an array
+  if (!Array.isArray(receivers)) {
+    console.error('renderReceivers received non-array:', receivers);
+    receivers = [];
+  }
 
   if (receivers.length === 0) {
     noReceivers.classList.remove('hidden');
