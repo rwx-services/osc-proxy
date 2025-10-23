@@ -149,7 +149,7 @@ module OSCProxy
     def metrics_output_loop
       while @running
         output_metrics
-        sleep 1 # Output metrics every second
+        sleep 0.1 # Output metrics 10 times per second for responsive UI
       end
     rescue StandardError => e
       @logger.log(:error, "Metrics output error: #{e.message}")
