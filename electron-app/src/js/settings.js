@@ -75,7 +75,8 @@ function closeWindow() {
 // Transmitter Management
 async function loadTransmitters() {
   try {
-    transmitters = await window.electronAPI.dbGetTransmitters();
+    const result = await window.electronAPI.dbGetTransmitters();
+    transmitters = result.success ? result.data : [];
     renderTransmittersList();
 
     if (transmitters.length > 0 && !selectedTransmitterId) {
@@ -113,7 +114,7 @@ function renderTransmittersList() {
         <span class="text-xs ${statusColor}">${statusText}</span>
       </div>
       <div class="text-xs text-gray-400">
-        ${protocol} :${tx.port || tx.tcp_port}
+        ${protocol} :${tx.port}
       </div>
     `;
 
@@ -169,7 +170,9 @@ async function addTransmitter() {
     });
 
     await loadTransmitters();
-    selectTransmitter(result.id);
+    if (result.success && result.data) {
+      selectTransmitter(result.data.id);
+    }
     showNotification('Transmitter created', 'success');
   } catch (error) {
     showNotification('Failed to create transmitter: ' + error.message, 'error');
@@ -227,7 +230,8 @@ async function deleteTransmitter() {
 // Receiver Management
 async function loadReceivers(transmitterId) {
   try {
-    const receivers = await window.electronAPI.dbGetReceivers(transmitterId);
+    const result = await window.electronAPI.dbGetReceivers(transmitterId);
+    const receivers = result.success ? result.data : [];
     renderReceivers(receivers);
   } catch (error) {
     showNotification('Failed to load receivers: ' + error.message, 'error');
@@ -296,13 +300,16 @@ window.editReceiver = async function(id) {
   receiverModalTitle.textContent = 'Edit Receiver';
 
   try {
-    const receiver = await window.electronAPI.dbGetReceiver(id);
-    rxName.value = receiver.name;
-    rxProtocol.value = receiver.protocol;
-    rxHost.value = receiver.host;
-    rxPort.value = receiver.port;
-    rxEnabled.checked = receiver.enabled === 1;
-    receiverModal.classList.remove('hidden');
+    const result = await window.electronAPI.dbGetReceiver(id);
+    if (result.success && result.data) {
+      const receiver = result.data;
+      rxName.value = receiver.name;
+      rxProtocol.value = receiver.protocol;
+      rxHost.value = receiver.host;
+      rxPort.value = receiver.port;
+      rxEnabled.checked = receiver.enabled === 1;
+      receiverModal.classList.remove('hidden');
+    }
   } catch (error) {
     showNotification('Failed to load receiver: ' + error.message, 'error');
   }
