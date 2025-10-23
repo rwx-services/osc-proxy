@@ -183,6 +183,11 @@ async function saveTransmitter() {
   if (!selectedTransmitterId) return;
 
   try {
+    console.log('=== SAVE TRANSMITTER DEBUG ===');
+    console.log('txEnabled element:', txEnabled);
+    console.log('txEnabled.checked:', txEnabled.checked);
+    console.log('txEnabled.type:', txEnabled.type);
+
     const data = {
       name: txName.value,
       protocol: txProtocol.value,
@@ -197,15 +202,19 @@ async function saveTransmitter() {
       data.bind_address = txTcpBind.value || '127.0.0.1';
     }
 
-    console.log('Saving transmitter with data:', data);
-    console.log('txEnabled.checked:', txEnabled.checked);
+    console.log('Data to save:', JSON.stringify(data, null, 2));
     const result = await window.electronAPI.dbUpdateTransmitter(selectedTransmitterId, data);
-    console.log('Update result:', result);
+    console.log('Update result:', JSON.stringify(result, null, 2));
+
     await loadTransmitters();
+
     // Re-select the transmitter to refresh the form
-    selectTransmitter(selectedTransmitterId);
+    await selectTransmitter(selectedTransmitterId);
+    console.log('After reload - transmitter enabled:', transmitters.find(t => t.id === selectedTransmitterId)?.enabled);
+
     showNotification('Transmitter saved', 'success');
   } catch (error) {
+    console.error('Save error:', error);
     showNotification('Failed to save transmitter: ' + error.message, 'error');
   }
 }

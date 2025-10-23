@@ -136,7 +136,7 @@ class ProxyDatabase {
 
     const info = stmt.run({
       name: data.name,
-      enabled: data.enabled !== false ? 1 : 0,
+      enabled: data.enabled ? 1 : 0,
       protocol: data.protocol || 'udp',
       bind_address: data.bind_address || '0.0.0.0',
       port: data.port,
@@ -168,11 +168,11 @@ class ProxyDatabase {
     const info = stmt.run({
       id,
       name: data.name,
-      enabled: data.enabled !== false ? 1 : 0,
+      enabled: data.enabled ? 1 : 0,
       protocol: data.protocol,
       bind_address: data.bind_address,
       port: data.port,
-      max_message_size: data.max_message_size
+      max_message_size: data.max_message_size || 8192
     });
 
     return info.changes > 0 ? this.getTransmitter(id) : null;
@@ -266,13 +266,13 @@ class ProxyDatabase {
     const info = stmt.run({
       transmitter_id: transmitterId,
       name: data.name,
-      enabled: data.enabled !== false ? 1 : 0,
+      enabled: data.enabled ? 1 : 0,
       protocol: data.protocol || 'tcp',
       host: data.host,
       port: data.port,
-      keepalive: data.keepalive !== false ? 1 : 0,
+      keepalive: data.keepalive ? 1 : 0,
       keepalive_interval: data.keepalive_interval || 10,
-      nodelay: data.nodelay !== false ? 1 : 0,
+      nodelay: data.nodelay ? 1 : 0,
       connect_timeout: data.connect_timeout || 5
     });
 
@@ -304,14 +304,14 @@ class ProxyDatabase {
     const info = stmt.run({
       id,
       name: data.name,
-      enabled: data.enabled !== false ? 1 : 0,
+      enabled: data.enabled ? 1 : 0,
       protocol: data.protocol,
       host: data.host,
       port: data.port,
-      keepalive: data.keepalive !== false ? 1 : 0,
-      keepalive_interval: data.keepalive_interval,
-      nodelay: data.nodelay !== false ? 1 : 0,
-      connect_timeout: data.connect_timeout
+      keepalive: data.keepalive ? 1 : 0,
+      keepalive_interval: data.keepalive_interval || 10,
+      nodelay: data.nodelay ? 1 : 0,
+      connect_timeout: data.connect_timeout || 5
     });
 
     return info.changes > 0 ? this.getReceiver(id) : null;
