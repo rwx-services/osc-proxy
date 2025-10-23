@@ -20,9 +20,14 @@
     "files": [
       "main.js",
       "preload.js",
+      "lib/**/*",
+      "assets/**/*",
       "src/**/*",
       "dist/**/*",
       "!src/styles/input.css"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
     ],
     "extraResources": [
       {
