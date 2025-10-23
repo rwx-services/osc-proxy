@@ -1,4 +1,4 @@
-// Renderer process - handles UI updates
+// Renderer process - handles UI updates for multi-transmitter dashboard
 
 // DOM elements
 const statusIndicator = document.getElementById('status-indicator');
@@ -6,7 +6,11 @@ const statusText = document.getElementById('status-text');
 const startButton = document.getElementById('start-button');
 const stopButton = document.getElementById('stop-button');
 
-// Metric displays
+// Transmitters container
+const transmittersContainer = document.getElementById('transmitters-container');
+const noTransmitters = document.getElementById('no-transmitters');
+
+// Aggregate metric displays
 const metricRate = document.getElementById('metric-rate');
 const metricAvgRate = document.getElementById('metric-avg-rate');
 const metricPeakRate = document.getElementById('metric-peak-rate');
@@ -15,19 +19,6 @@ const metricTotal = document.getElementById('metric-total');
 const metricForwarded = document.getElementById('metric-forwarded');
 const metricDropped = document.getElementById('metric-dropped');
 const metricLoss = document.getElementById('metric-loss');
-
-// Connection displays
-const inboundType = document.getElementById('inbound-type');
-const inboundBind = document.getElementById('inbound-bind');
-const inboundPort = document.getElementById('inbound-port');
-const inboundStatus = document.getElementById('inbound-status');
-const inboundStatusIndicator = document.getElementById('inbound-status-indicator');
-
-const outboundType = document.getElementById('outbound-type');
-const outboundHost = document.getElementById('outbound-host');
-const outboundPort = document.getElementById('outbound-port');
-const outboundStatus = document.getElementById('outbound-status');
-const outboundStatusIndicator = document.getElementById('outbound-status-indicator');
 
 const rateSparkline = document.getElementById('rate-sparkline');
 
@@ -81,68 +72,118 @@ function updateProxyState(state) {
     stopButton.classList.add('hidden');
   }
 
-  // Update metrics if provided
-  if (state.metrics) {
-    updateMetrics(state.metrics);
+  // Reset metrics if stopped
+  if (!state.running) {
+    resetMetrics();
   }
 }
 
 function updateMetrics(metrics) {
+  // Handle both old single-transmitter format and new multi-transmitter format
+  if (metrics.aggregate && metrics.transmitters) {
+    // New multi-transmitter format
+    updateAggregateMetrics(metrics.aggregate);
+    updateTransmitters(metrics.transmitters);
+  } else {
+    // Old single-transmitter format (fallback)
+    updateAggregateMetrics(metrics);
+  }
+
+  // Update sparkline with aggregate rate
+  const rate = metrics.aggregate ? metrics.aggregate.rate : metrics.rate;
+  updateSparkline(rate || 0);
+}
+
+function updateAggregateMetrics(metrics) {
   // Update primary metrics
   metricRate.textContent = formatNumber(metrics.rate || 0, 1);
-  metricAvgRate.textContent = formatNumber(metrics.avgRate || 0, 1);
-  metricPeakRate.textContent = formatNumber(metrics.peakRate || 0, 1);
+  metricAvgRate.textContent = formatNumber(metrics.avg_rate || metrics.avgRate || 0, 1);
+  metricPeakRate.textContent = formatNumber(metrics.peak_rate || metrics.peakRate || 0, 1);
 
   // Update secondary metrics
   metricLatency.textContent = formatNumber(metrics.latency || 0, 2);
   metricTotal.textContent = formatNumber(metrics.total || 0);
   metricForwarded.textContent = formatNumber(metrics.forwarded || 0);
   metricDropped.textContent = formatNumber(metrics.dropped || 0);
-  metricLoss.textContent = formatNumber(metrics.lossPct || 0, 1);
-
-  // Update connections
-  if (metrics.connections) {
-    updateConnections(metrics.connections);
-  }
-
-  // Update sparkline
-  updateSparkline(metrics.rate || 0);
+  metricLoss.textContent = formatNumber(metrics.loss_pct || metrics.lossPct || 0, 1);
 }
 
-function updateConnections(connections) {
-  // Update inbound connection
-  if (connections.inbound) {
-    const inbound = connections.inbound;
-    inboundType.textContent = inbound.type || '-';
-    inboundBind.textContent = inbound.bind || '-';
-    inboundPort.textContent = inbound.port || '-';
-    inboundStatus.textContent = inbound.status || '-';
+function updateTransmitters(transmitters) {
+  // Clear existing transmitter cards except the no-transmitters message
+  const existingCards = transmittersContainer.querySelectorAll('.transmitter-card');
+  existingCards.forEach(card => card.remove());
 
-    // Update status indicator
-    inboundStatusIndicator.className = 'status-indicator';
-    if (inbound.status === 'listening') {
-      inboundStatusIndicator.classList.add('status-connected');
-    } else {
-      inboundStatusIndicator.classList.add('status-disconnected');
-    }
+  if (!transmitters || transmitters.length === 0) {
+    noTransmitters.classList.remove('hidden');
+    return;
   }
 
-  // Update outbound connection
-  if (connections.outbound) {
-    const outbound = connections.outbound;
-    outboundType.textContent = outbound.type || '-';
-    outboundHost.textContent = outbound.host || '-';
-    outboundPort.textContent = outbound.port || '-';
-    outboundStatus.textContent = outbound.status || '-';
+  noTransmitters.classList.add('hidden');
 
-    // Update status indicator
-    outboundStatusIndicator.className = 'status-indicator';
-    if (outbound.status === 'connected') {
-      outboundStatusIndicator.classList.add('status-connected');
-    } else {
-      outboundStatusIndicator.classList.add('status-disconnected');
-    }
-  }
+  // Create a card for each transmitter
+  transmitters.forEach(tx => {
+    const card = createTransmitterCard(tx);
+    transmittersContainer.appendChild(card);
+  });
+}
+
+function createTransmitterCard(tx) {
+  const card = document.createElement('div');
+  card.className = 'transmitter-card metric-card';
+
+  const statusColor = tx.status === 'running' ? 'text-green-400' : 'text-gray-500';
+  const statusIcon = tx.status === 'running' ? 'status-connected' : 'status-idle';
+
+  card.innerHTML = `
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <div class="status-indicator ${statusIcon}"></div>
+        <h3 class="text-sm font-semibold">${escapeHtml(tx.name || 'Unnamed')}</h3>
+      </div>
+      <span class="text-xs ${statusColor}">${tx.protocol ? tx.protocol.toUpperCase() : 'UDP'}</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-3">
+      <div>
+        <div class="text-xs text-gray-400">Rate</div>
+        <div class="text-lg font-bold tabular-nums text-green-400">${formatNumber(tx.rate || 0, 1)}</div>
+        <div class="text-xs text-gray-500">msg/s</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-400">Latency</div>
+        <div class="text-lg font-bold tabular-nums">${formatNumber(tx.latency || 0, 2)}</div>
+        <div class="text-xs text-gray-500">ms</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+      <div>
+        <div class="text-gray-400">Total</div>
+        <div class="font-mono">${formatNumber(tx.total || 0)}</div>
+      </div>
+      <div>
+        <div class="text-gray-400">Forwarded</div>
+        <div class="font-mono text-green-400">${formatNumber(tx.forwarded || 0)}</div>
+      </div>
+      <div>
+        <div class="text-gray-400">Dropped</div>
+        <div class="font-mono text-red-400">${formatNumber(tx.dropped || 0)}</div>
+      </div>
+    </div>
+
+    <div class="text-xs text-gray-500 border-t border-proxy-gray-light pt-2">
+      <div class="flex justify-between">
+        <span>Listen:</span>
+        <span class="font-mono">${tx.bind || tx.bind_address || '0.0.0.0'}:${tx.port || '-'}</span>
+      </div>
+      <div class="flex justify-between mt-1">
+        <span>Receivers:</span>
+        <span class="font-mono">${tx.receivers_count || 0}</span>
+      </div>
+    </div>
+  `;
+
+  return card;
 }
 
 function updateSparkline(rate) {
@@ -153,14 +194,33 @@ function updateSparkline(rate) {
 
   const maxRate = Math.max(...rateHistory, 1);
 
-  rateSparkline.innerHTML = rateHistory.map(value => {
-    const height = (value / maxRate) * 100;
-    const color = value > maxRate * 0.7 ? 'bg-green-500' :
-                  value > maxRate * 0.4 ? 'bg-blue-500' :
-                  'bg-gray-600';
+  rateSparkline.innerHTML = '';
+  rateHistory.forEach(value => {
+    const bar = document.createElement('div');
+    const height = Math.max((value / maxRate) * 100, 2);
+    bar.className = 'flex-1 bg-green-400/30 rounded-sm transition-all duration-300';
+    bar.style.height = `${height}%`;
+    rateSparkline.appendChild(bar);
+  });
+}
 
-    return `<div class="${color} rounded-t flex-1 transition-all duration-300" style="height: ${height}%"></div>`;
-  }).join('');
+function resetMetrics() {
+  metricRate.textContent = '0.0';
+  metricAvgRate.textContent = '0.0';
+  metricPeakRate.textContent = '0.0';
+  metricLatency.textContent = '0.00';
+  metricTotal.textContent = '0';
+  metricForwarded.textContent = '0';
+  metricDropped.textContent = '0';
+  metricLoss.textContent = '0.0';
+
+  rateHistory = [];
+  rateSparkline.innerHTML = '';
+
+  // Clear transmitter cards
+  const existingCards = transmittersContainer.querySelectorAll('.transmitter-card');
+  existingCards.forEach(card => card.remove());
+  noTransmitters.classList.remove('hidden');
 }
 
 function formatNumber(value, decimals = 0) {
@@ -172,10 +232,17 @@ function formatNumber(value, decimals = 0) {
     return value.toFixed(decimals);
   }
 
-  return value.toLocaleString();
+  // Add commas for thousands
+  return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-// Initialize when DOM is ready
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Initialize on DOMContentLoaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

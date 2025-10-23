@@ -356,11 +356,13 @@ function startProxy(configPath = null) {
     ? path.join(process.resourcesPath, 'ruby-proxy', 'bin', 'osc-proxy')
     : path.join(__dirname, '..', 'bin', 'osc-proxy');
 
-  const config = configPath || path.join(__dirname, '..', 'config', 'lightkey.yml');
+  // Use database for multi-transmitter mode
+  const dbPath = path.join(app.getPath('userData'), 'proxy.db');
 
   console.log('Starting Ruby proxy:', rubyProxyPath);
+  console.log('Using database:', dbPath);
 
-  const args = ['-c', config, '--json'];
+  const args = ['--database', dbPath, '--json'];
 
   proxyProcess = spawn('ruby', [rubyProxyPath, ...args], {
     stdio: ['ignore', 'pipe', 'pipe']

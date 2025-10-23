@@ -28,6 +28,20 @@
 
     <!-- Main Content -->
     <main class="flex-1 overflow-y-auto p-6">
+      <!-- Transmitters Section -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-4">Transmitters</h2>
+        <div id="transmitters-container" class="grid grid-cols-2 gap-4 mb-6">
+          <!-- Transmitter cards will be inserted here -->
+          <div class="col-span-2 text-center py-8 text-gray-500 text-sm" id="no-transmitters">
+            No active transmitters
+          </div>
+        </div>
+      </div>
+
+      <!-- Aggregate Metrics -->
+      <h2 class="text-lg font-semibold mb-4">Aggregate Metrics</h2>
+
       <!-- Primary Metrics -->
       <div class="grid grid-cols-3 gap-6 mb-6">
         <!-- Current Rate -->
@@ -86,71 +100,6 @@
           <div class="text-2xl font-bold tabular-nums text-red-400" id="metric-dropped">0</div>
           <div class="metric-unit">
             <span id="metric-loss">0.0</span>% loss
-          </div>
-        </div>
-      </div>
-
-      <!-- Connections Panel -->
-      <div class="flex gap-4">
-        <!-- Inbound Connection -->
-        <div class="metric-card flex-1">
-          <div class="flex items-center gap-2 mb-3">
-            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"></path>
-            </svg>
-            <h3 class="text-sm font-semibold">Inbound Connection</h3>
-          </div>
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-gray-400">Protocol:</span>
-              <span class="font-mono text-green-400" id="inbound-type">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-400">Bind Address:</span>
-              <span class="font-mono" id="inbound-bind">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-400">Port:</span>
-              <span class="font-mono" id="inbound-port">-</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400">Status:</span>
-              <div class="flex items-center gap-2">
-                <div class="status-indicator status-idle" id="inbound-status-indicator"></div>
-                <span class="font-mono text-sm" id="inbound-status">-</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Outbound Connection -->
-        <div class="metric-card flex-1">
-          <div class="flex items-center gap-2 mb-3">
-            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-            </svg>
-            <h3 class="text-sm font-semibold">Outbound Connection</h3>
-          </div>
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-gray-400">Protocol:</span>
-              <span class="font-mono text-blue-400" id="outbound-type">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-400">Host:</span>
-              <span class="font-mono" id="outbound-host">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-400">Port:</span>
-              <span class="font-mono" id="outbound-port">-</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400">Status:</span>
-              <div class="flex items-center gap-2">
-                <div class="status-indicator status-idle" id="outbound-status-indicator"></div>
-                <span class="font-mono text-sm" id="outbound-status">-</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
