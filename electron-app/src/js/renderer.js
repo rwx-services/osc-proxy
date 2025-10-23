@@ -401,7 +401,6 @@ function resetMetrics() {
   metricRate.textContent = '0.0';
   metricAvgRate.textContent = '0.0';
   metricPeakRate.textContent = '0.0';
-  metricLatency.textContent = '0.00';
   metricTotal.textContent = '0';
   metricForwarded.textContent = '0';
   metricDropped.textContent = '0';
