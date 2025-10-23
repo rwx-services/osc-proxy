@@ -196,6 +196,13 @@ function updateTransmitters(transmitters) {
 
   noTransmitters.classList.add('hidden');
 
+  // Adjust grid layout based on transmitter count
+  if (transmitters.length === 1) {
+    transmittersContainer.className = 'grid grid-cols-1 gap-4 mb-6';
+  } else {
+    transmittersContainer.className = 'grid grid-cols-2 gap-4 mb-6';
+  }
+
   // Create a card for each transmitter
   transmitters.forEach(tx => {
     const card = createTransmitterCard(tx);
@@ -210,55 +217,104 @@ function createTransmitterCard(tx) {
   const statusColor = tx.status === 'running' ? 'text-green-400' : 'text-gray-500';
   const statusIcon = tx.status === 'running' ? 'status-connected' : 'status-idle';
 
-  card.innerHTML = `
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
+  // Transmitter header and metrics
+  let html = `
+    <div class="flex items-center justify-between mb-4 pb-3 border-b border-proxy-gray-light">
+      <div class="flex items-center gap-3">
         <div class="status-indicator ${statusIcon}"></div>
-        <h3 class="text-sm font-semibold">${escapeHtml(tx.name || 'Unnamed')}</h3>
+        <div>
+          <h3 class="text-lg font-semibold">${escapeHtml(tx.name || 'Unnamed')}</h3>
+          <div class="text-xs text-gray-400 mt-0.5">
+            ${tx.protocol ? tx.protocol.toUpperCase() : 'UDP'} · ${tx.bind_address || '0.0.0.0'}:${tx.port || '-'}
+          </div>
+        </div>
       </div>
-      <span class="text-xs ${statusColor}">${tx.protocol ? tx.protocol.toUpperCase() : 'UDP'}</span>
+      <div class="text-xs ${statusColor} font-medium">${tx.status === 'running' ? 'Running' : 'Stopped'}</div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 mb-3">
+    <div class="grid grid-cols-5 gap-4 mb-4">
       <div>
         <div class="text-xs text-gray-400">Rate</div>
-        <div class="text-lg font-bold tabular-nums text-green-400">${formatNumber(tx.rate || 0, 1)}</div>
+        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(tx.rate || 0, 1)}</div>
         <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
-        <div class="text-xs text-gray-400">Latency</div>
-        <div class="text-lg font-bold tabular-nums">${formatNumber(tx.latency || 0, 2)}</div>
-        <div class="text-xs text-gray-500">ms</div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-3 gap-2 text-xs mb-3">
-      <div>
-        <div class="text-gray-400">Total</div>
-        <div class="font-mono">${formatNumber(tx.total || 0)}</div>
+        <div class="text-xs text-gray-400">Avg Rate</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.avg_rate || 0, 1)}</div>
+        <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
-        <div class="text-gray-400">Forwarded</div>
-        <div class="font-mono text-green-400">${formatNumber(tx.forwarded || 0)}</div>
+        <div class="text-xs text-gray-400">Peak Rate</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.peak_rate || 0, 1)}</div>
+        <div class="text-xs text-gray-500">msg/s</div>
       </div>
       <div>
-        <div class="text-gray-400">Dropped</div>
-        <div class="font-mono text-red-400">${formatNumber(tx.dropped || 0)}</div>
+        <div class="text-xs text-gray-400">Total</div>
+        <div class="text-xl font-bold tabular-nums">${formatNumber(tx.total || 0)}</div>
+        <div class="text-xs text-gray-500">messages</div>
       </div>
-    </div>
-
-    <div class="text-xs text-gray-500 border-t border-proxy-gray-light pt-2">
-      <div class="flex justify-between">
-        <span>Listen:</span>
-        <span class="font-mono">${tx.bind || tx.bind_address || '0.0.0.0'}:${tx.port || '-'}</span>
-      </div>
-      <div class="flex justify-between mt-1">
-        <span>Receivers:</span>
-        <span class="font-mono">${tx.receivers_count || 0}</span>
+      <div>
+        <div class="text-xs text-gray-400">Forwarded</div>
+        <div class="text-xl font-bold tabular-nums text-green-400">${formatNumber(tx.forwarded || 0)}</div>
+        <div class="text-xs text-gray-500">messages</div>
       </div>
     </div>
   `;
 
+  // Receivers table
+  if (tx.receivers && tx.receivers.length > 0) {
+    html += `
+      <div class="mt-4">
+        <h4 class="text-sm font-semibold mb-2 text-gray-300">Receivers</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="text-gray-400 border-b border-proxy-gray-light">
+              <tr>
+                <th class="text-left py-2 px-2 font-medium">Name</th>
+                <th class="text-left py-2 px-2 font-medium">Protocol</th>
+                <th class="text-left py-2 px-2 font-medium">Address</th>
+                <th class="text-right py-2 px-2 font-medium">Latency</th>
+                <th class="text-right py-2 px-2 font-medium">Forwarded</th>
+                <th class="text-right py-2 px-2 font-medium">Dropped</th>
+                <th class="text-right py-2 px-2 font-medium">Failed</th>
+                <th class="text-center py-2 px-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    tx.receivers.forEach(rx => {
+      const connectedColor = rx.connected ? 'text-green-400' : 'text-red-400';
+      const connectedText = rx.connected ? '●' : '○';
+      html += `
+              <tr class="border-b border-proxy-gray-light/30 hover:bg-proxy-gray-light/10">
+                <td class="py-2 px-2 font-medium">${escapeHtml(rx.name || 'Unnamed')}</td>
+                <td class="py-2 px-2 text-gray-400">${(rx.protocol || 'udp').toUpperCase()}</td>
+                <td class="py-2 px-2 font-mono text-gray-400">${rx.host}:${rx.port}</td>
+                <td class="py-2 px-2 text-right font-mono">${formatNumber(rx.latency || 0, 2)} ms</td>
+                <td class="py-2 px-2 text-right font-mono text-green-400">${formatNumber(rx.forwarded || 0)}</td>
+                <td class="py-2 px-2 text-right font-mono text-yellow-400">${formatNumber(rx.dropped || 0)}</td>
+                <td class="py-2 px-2 text-right font-mono text-red-400">${formatNumber(rx.failed || 0)}</td>
+                <td class="py-2 px-2 text-center ${connectedColor}">${connectedText}</td>
+              </tr>
+      `;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="mt-4 text-center py-4 text-gray-500 text-sm border border-proxy-gray-light/30 rounded">
+        No receivers configured
+      </div>
+    `;
+  }
+
+  card.innerHTML = html;
   return card;
 }
 

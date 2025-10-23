@@ -153,6 +153,7 @@ module OSCProxy
         TCPConnection.new(
           host: receiver_config[:host],
           port: receiver_config[:port],
+          name: receiver_config[:name],
           logger: @logger,
           config: tcp_config
         )
@@ -160,6 +161,7 @@ module OSCProxy
         UDPSender.new(
           host: receiver_config[:host],
           port: receiver_config[:port],
+          name: receiver_config[:name],
           logger: @logger
         )
       else
@@ -204,10 +206,12 @@ module OSCProxy
       failed = 0
 
       @receivers.each do |receiver|
-        if forward_to_receiver(receiver, data)
+        send_start = Time.now
+        if forward_to_receiver(receiver, data, send_start)
           successful += 1
         else
           failed += 1
+          receiver.record_drop if receiver.respond_to?(:record_drop)
         end
       end
 
@@ -220,22 +224,29 @@ module OSCProxy
       failed.times { @metrics.record_dropped }
     end
 
-    def forward_to_receiver(receiver, data)
+    def forward_to_receiver(receiver, data, send_start)
       # Ensure receiver is connected
       unless receiver.connected?
         receiver.reconnect if receiver.respond_to?(:reconnect)
         return false unless receiver.connected?
       end
 
-      receiver.send_data(data)
+      # Calculate latency for this specific receiver
+      latency_ms = ((Time.now - send_start) * 1000).round(2)
+      receiver.send_data(data, latency_ms: latency_ms)
     end
 
     def receiver_status(receiver)
       {
-        host: receiver.respond_to?(:host) ? receiver.host : 'unknown',
-        port: receiver.respond_to?(:port) ? receiver.port : 0,
+        name: receiver.name,
+        host: receiver.host,
+        port: receiver.port,
         protocol: receiver.is_a?(TCPConnection) ? 'tcp' : 'udp',
-        connected: receiver.connected?
+        connected: receiver.connected?,
+        latency: receiver.avg_latency_ms,
+        forwarded: receiver.forwarded_count,
+        dropped: receiver.dropped_count,
+        failed: receiver.failed_count
       }
     end
   end

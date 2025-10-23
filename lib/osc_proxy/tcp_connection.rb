@@ -4,17 +4,27 @@ require 'socket'
 
 module OSCProxy
   class TCPConnection
-    attr_reader :connected, :attempt_count
+    attr_reader :connected, :attempt_count, :host, :port, :name
+    attr_reader :forwarded_count, :dropped_count, :failed_count
+    attr_reader :total_latency, :latency_samples
 
-    def initialize(host:, port:, logger:, config:)
+    def initialize(host:, port:, logger:, config:, name: nil)
       @host = host
       @port = port
+      @name = name || "#{host}:#{port}"
       @logger = logger
       @config = config
       @socket = nil
       @connected = false
       @attempt_count = 0
       @current_delay = config.reconnect_initial_delay
+
+      # Per-receiver metrics
+      @forwarded_count = 0
+      @dropped_count = 0
+      @failed_count = 0
+      @total_latency = 0.0
+      @latency_samples = 0
     end
 
     def connect
@@ -68,7 +78,7 @@ module OSCProxy
       result
     end
 
-    def send_data(data)
+    def send_data(data, latency_ms: 0)
       raise 'Not connected' unless @connected
 
       # Add SLIP framing (required for OSC over TCP by Lightkey)
@@ -78,9 +88,18 @@ module OSCProxy
 
       @socket.write(framed_data)
       @socket.flush # Ensure data is sent immediately
+
+      # Track successful send
+      @forwarded_count += 1
+      if latency_ms.positive?
+        @total_latency += latency_ms
+        @latency_samples += 1
+      end
+
       true
     rescue Errno::EPIPE, Errno::ECONNRESET, IOError
       @connected = false
+      @failed_count += 1
       false
     end
 
@@ -94,6 +113,16 @@ module OSCProxy
 
     def connected?
       @connected
+    end
+
+    def record_drop
+      @dropped_count += 1
+    end
+
+    def avg_latency_ms
+      return 0.0 if @latency_samples.zero?
+
+      (@total_latency / @latency_samples).round(2)
     end
 
     private
