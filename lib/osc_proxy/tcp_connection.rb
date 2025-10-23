@@ -75,7 +75,8 @@ module OSCProxy
     def send_data(data)
       raise 'Not connected' unless @connected
 
-      @socket.write(data)
+      bytes_written = @socket.write(data)
+      @logger.verbose("Sent #{bytes_written} bytes over TCP")
       true
     rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
       @logger.warn("TCP connection lost: #{e.message}")

@@ -1,0 +1,108 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'osc-ruby'
+require 'socket'
+require 'optparse'
+
+# Parse command line options
+options = {
+  host: '127.0.0.1',
+  port: nil,
+  protocol: :tcp
+}
+
+parser = OptionParser.new do |opts|
+  opts.banner = 'Usage: bin/send [options] <osc_address> [args...]'
+  opts.separator ''
+  opts.separator 'Examples:'
+  opts.separator '  bin/send -h 127.0.0.1 -p 21600 --tcp /beat/tempo 120'
+  opts.separator '  bin/send -h 127.0.0.1 -p 21650 --udp /cue/fire 1 "go"'
+  opts.separator '  bin/send -p 21600 /test/message'
+  opts.separator ''
+  opts.separator 'Options:'
+
+  opts.on('-h', '--host HOST', 'Destination host (default: 127.0.0.1)') do |host|
+    options[:host] = host
+  end
+
+  opts.on('-p', '--port PORT', Integer, 'Destination port (required)') do |port|
+    options[:port] = port
+  end
+
+  opts.on('--tcp', 'Use TCP protocol (default)') do
+    options[:protocol] = :tcp
+  end
+
+  opts.on('--udp', 'Use UDP protocol') do
+    options[:protocol] = :udp
+  end
+
+  opts.on('--help', 'Show this help message') do
+    puts opts
+    exit
+  end
+end
+
+parser.parse!
+
+# Validate arguments
+if ARGV.empty?
+  puts 'Error: OSC address required'
+  puts parser.help
+  exit 1
+end
+
+unless options[:port]
+  puts 'Error: Port (-p) is required'
+  puts parser.help
+  exit 1
+end
+
+osc_address = ARGV.shift
+osc_args = ARGV.map do |arg|
+  # Try to parse as number, otherwise treat as string
+  case arg
+  when /^-?\d+$/
+    arg.to_i
+  when /^-?\d+\.\d+$/
+    arg.to_f
+  else
+    arg
+  end
+end
+
+# Create OSC message
+message = OSC::Message.new(osc_address, *osc_args)
+data = message.encode
+
+# Display message info
+puts '=== Sending OSC Message ==='
+puts "Address: #{message.address}"
+puts "Args: #{message.to_a.inspect}"
+puts "Size: #{data.bytesize} bytes"
+puts "Hex: #{data.unpack1('H*')}"
+puts "Protocol: #{options[:protocol].to_s.upcase}"
+puts "Destination: #{options[:host]}:#{options[:port]}"
+puts
+
+# Send message
+begin
+  case options[:protocol]
+  when :tcp
+    socket = TCPSocket.new(options[:host], options[:port])
+    socket.write(data)
+    socket.flush
+    socket.close
+    puts '✓ Sent via TCP'
+  when :udp
+    socket = UDPSocket.new
+    socket.send(data, 0, options[:host], options[:port])
+    socket.close
+    puts '✓ Sent via UDP'
+  end
+rescue StandardError => e
+  puts "✗ Failed: #{e.message}"
+  exit 1
+end

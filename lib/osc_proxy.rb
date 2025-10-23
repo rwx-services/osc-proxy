@@ -85,7 +85,11 @@ module OSCProxy
 
     def handle_incoming_message
       data = @udp_listener.receive
-      process_osc_message(data)
+
+      if data
+        @logger.verbose("Received #{data.bytesize} bytes from UDP")
+        process_osc_message(data)
+      end
     rescue StandardError => e
       @logger.error("Error receiving UDP message: #{e.message}")
       @logger.verbose(e.backtrace.join("\n"))
@@ -93,6 +97,8 @@ module OSCProxy
 
     def process_osc_message(data)
       return if data.nil? || data.empty?
+
+      @logger.verbose("Processing #{data.bytesize} bytes")
 
       # Forward raw data immediately (don't wait for parsing)
       forward_raw_data(data)
