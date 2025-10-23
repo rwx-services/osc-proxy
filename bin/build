@@ -115,8 +115,11 @@ echo ""
 if [ -d "dist-build" ]; then
   echo -e "${BLUE}Built files:${NC}"
   ls -lh dist-build/*.{dmg,zip} 2>/dev/null || true
-  if [ -d "dist-build/mac-universal" ]; then
-    echo -e "${BLUE}Unpacked app:${NC} dist-build/mac-universal/OSC Proxy.app"
+  if [ -d "dist-build/mac" ]; then
+    echo -e "${BLUE}Unpacked app:${NC} dist-build/mac/OSC Proxy.app (Intel x86_64)"
+  fi
+  if [ -d "dist-build/mac-arm64" ]; then
+    echo -e "${BLUE}Unpacked app:${NC} dist-build/mac-arm64/OSC Proxy.app (Apple Silicon arm64)"
   fi
 fi
 

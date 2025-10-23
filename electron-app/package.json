@@ -58,24 +58,9 @@
       "category": "public.app-category.utilities",
       "icon": "assets/icon.icns",
       "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "dir",
-          "arch": [
-            "universal"
-          ]
-        }
+        "dmg",
+        "zip",
+        "dir"
       ]
     },
     "dmg": {

@@ -34,7 +34,7 @@ npm run build:portable
 ```
 
 This will create:
-- `electron-app/dist-build/mac-universal/OSC Proxy.app` - Unpacked app directory
+- `electron-app/dist-build/mac/OSC Proxy.app` or `electron-app/dist-build/mac-arm64/OSC Proxy.app` - Unpacked app directory
 - `electron-app/dist-build/OSC Proxy-1.0.0-mac.zip` - ZIP archive for distribution
 
 ### For USB Drive Distribution:
@@ -45,15 +45,17 @@ This will create:
 - No installation required
 
 **Option 2: Direct App Copy**
-- Copy the `OSC Proxy.app` folder from `dist-build/mac-universal/` to USB drive
+- Copy the `OSC Proxy.app` folder from `dist-build/mac/` (Intel) or `dist-build/mac-arm64/` (Apple Silicon) to USB drive
 - Users can drag it to Applications or run directly from USB
 - Faster than extracting a ZIP
 
-### Universal Binary
+### Architecture
 
-The build is a universal binary that runs on both:
-- Intel Macs (x86_64)
-- Apple Silicon Macs (arm64)
+The build is architecture-specific (Intel or Apple Silicon) because it includes Ruby gems with native extensions. Build on the target architecture:
+- Build on Intel Mac → x86_64 build
+- Build on Apple Silicon Mac → arm64 build
+
+Both architectures will work on modern macOS versions.
 
 ## Building All Formats
 
