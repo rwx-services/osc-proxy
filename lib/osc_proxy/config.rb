@@ -82,6 +82,11 @@ module OSCProxy
           options['logging']['level'] = level
         end
 
+        opts.on('--json', 'Output metrics as JSON (for GUI integration)') do
+          options['logging'] ||= {}
+          options['logging']['json_mode'] = true
+        end
+
         opts.on('-v', '--version', 'Show version') do
           puts "osc-proxy version #{OSCProxy::VERSION}"
           exit
@@ -161,6 +166,10 @@ module OSCProxy
 
     def show_message_content?
       @config.dig('logging', 'show_message_content')
+    end
+
+    def json_mode?
+      @config.dig('logging', 'json_mode') || false
     end
 
     private

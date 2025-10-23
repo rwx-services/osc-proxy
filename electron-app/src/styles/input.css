@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-proxy-darker text-white antialiased;
+  }
+}
+
+@layer components {
+  .metric-card {
+    @apply bg-gradient-to-br from-proxy-gray/50 to-proxy-gray/30 rounded-xl p-6 border border-proxy-gray-light/50 backdrop-blur-sm transition-all duration-200 hover:border-proxy-accent/30;
+  }
+
+  .metric-card-large {
+    @apply metric-card;
+  }
+
+  .metric-value {
+    @apply text-4xl font-bold tabular-nums;
+  }
+
+  .metric-label {
+    @apply text-gray-400 text-sm mb-2 uppercase tracking-wide;
+  }
+
+  .metric-unit {
+    @apply text-gray-500 text-sm mt-1;
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-proxy-darker;
+  }
+
+  .btn-primary {
+    @apply btn bg-proxy-accent hover:bg-proxy-accent-dark text-white focus:ring-proxy-accent;
+  }
+
+  .btn-secondary {
+    @apply btn bg-proxy-gray hover:bg-proxy-gray-light text-white focus:ring-proxy-gray;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;
+  }
+
+  .status-indicator {
+    @apply w-3 h-3 rounded-full animate-pulse;
+  }
+
+  .status-connected {
+    @apply bg-green-400 shadow-lg shadow-green-400/50;
+  }
+
+  .status-disconnected {
+    @apply bg-red-400 shadow-lg shadow-red-400/50;
+  }
+
+  .status-idle {
+    @apply bg-gray-400;
+  }
+
+  .glass {
+    @apply bg-proxy-gray/30 backdrop-blur-md border border-proxy-gray-light/30;
+  }
+
+  .log-entry {
+    @apply font-mono text-sm px-3 py-2 rounded border-l-2 transition-colors;
+  }
+
+  .log-info {
+    @apply log-entry border-blue-500/50 bg-blue-500/5 text-blue-300;
+  }
+
+  .log-error {
+    @apply log-entry border-red-500/50 bg-red-500/5 text-red-300;
+  }
+
+  .log-success {
+    @apply log-entry border-green-500/50 bg-green-500/5 text-green-300;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-proxy-accent to-emerald-400 bg-clip-text text-transparent;
+  }
+
+  .glow-accent {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  }
+}

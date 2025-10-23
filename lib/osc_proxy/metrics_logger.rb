@@ -5,9 +5,10 @@ module OSCProxy
   class MetricsLogger
     attr_reader :metrics
 
-    def initialize(output: $stdout, interval: 1.0)
+    def initialize(output: $stdout, interval: 1.0, json_mode: false)
       @output = output
       @interval = interval
+      @json_mode = json_mode
       @metrics = {
         total_received: 0,
         total_forwarded: 0,
@@ -21,6 +22,10 @@ module OSCProxy
         forwarded: 0,
         dropped: 0
       }
+      @connections = {
+        udp_listener: nil,
+        tcp_connection: nil
+      }
       @start_time = Time.now
       @last_display = Time.now
       @running = false
@@ -32,6 +37,13 @@ module OSCProxy
       @running = true
       @start_time = Time.now
       @last_display = Time.now
+
+      # In JSON mode, set stdout to sync mode and send immediate status
+      if @json_mode
+        @output.sync = true
+        send_immediate_status
+      end
+
       start_display_thread
     end
 
@@ -65,7 +77,21 @@ module OSCProxy
       end
     end
 
+    def update_connections(udp_listener:, tcp_connection:)
+      @mutex.synchronize do
+        @connections[:udp_listener] = udp_listener
+        @connections[:tcp_connection] = tcp_connection
+      end
+    end
+
     private
+
+    def send_immediate_status
+      # Send initial status immediately so GUI doesn't wait for first interval
+      stats = build_stats_hash(0.0)
+      @output.puts format_stats_json(stats)
+      @output.flush
+    end
 
     def start_display_thread
       @display_thread = Thread.new do
@@ -88,10 +114,15 @@ module OSCProxy
       stats = calculate_stats(elapsed)
       @last_display = now
 
-      # Clear line and move cursor up to overwrite previous stats
-      print "\r\033[K"
-      @output.print format_stats(stats)
-      @output.flush
+      if @json_mode
+        @output.puts format_stats_json(stats)
+        @output.flush
+      else
+        # Clear line and move cursor up to overwrite previous stats
+        print "\r\033[K"
+        @output.print format_stats(stats)
+        @output.flush
+      end
     end
 
     def calculate_stats(elapsed)
@@ -163,6 +194,41 @@ module OSCProxy
         dropped: stats[:total_dropped],
         loss: stats[:packet_loss_pct]
       )
+    end
+
+    def format_stats_json(stats)
+      require 'json'
+      {
+        rate: stats[:messages_per_sec],
+        avgRate: stats[:avg_rate],
+        peakRate: stats[:peak_rate],
+        latency: stats[:avg_latency],
+        total: stats[:total_received],
+        forwarded: stats[:total_forwarded],
+        dropped: stats[:total_dropped],
+        lossPct: stats[:packet_loss_pct],
+        connections: get_connection_info
+      }.to_json
+    end
+
+    def get_connection_info
+      udp = @connections[:udp_listener]
+      tcp = @connections[:tcp_connection]
+
+      {
+        inbound: udp ? {
+          type: 'UDP',
+          bind: udp.instance_variable_get(:@bind),
+          port: udp.instance_variable_get(:@port),
+          status: 'listening'
+        } : nil,
+        outbound: tcp ? {
+          type: 'TCP',
+          host: tcp.instance_variable_get(:@host),
+          port: tcp.instance_variable_get(:@port),
+          status: tcp.connected? ? 'connected' : 'disconnected'
+        } : nil
+      }
     end
 
     def display_final_stats

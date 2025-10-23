@@ -14,7 +14,7 @@ module OSCProxy
         level: config.log_level,
         show_content: config.show_message_content?
       )
-      @metrics = MetricsLogger.new
+      @metrics = MetricsLogger.new(json_mode: config.json_mode?)
       @running = false
       @tcp_connection = nil
       @udp_listener = nil
@@ -25,6 +25,10 @@ module OSCProxy
       setup_udp_listener
       setup_tcp_connection
 
+      @metrics.update_connections(
+        udp_listener: @udp_listener,
+        tcp_connection: @tcp_connection
+      )
       @metrics.start
       @running = true
       run_proxy_loop

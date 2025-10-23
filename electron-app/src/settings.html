@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - OSC Proxy</title>
+  <link rel="stylesheet" href="../dist/styles.css">
+</head>
+<body>
+  <div class="h-screen flex flex-col">
+    <!-- Header -->
+    <header class="glass border-b border-proxy-gray-light/30 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl font-bold">Settings</h1>
+        <button id="btn-close" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      <div class="max-w-2xl mx-auto space-y-6">
+        <!-- Configuration File -->
+        <div class="metric-card">
+          <h2 class="text-lg font-semibold mb-4">Configuration</h2>
+
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Config File</label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="config-path"
+                value="../config/lightkey.yml"
+                class="flex-1 bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+                placeholder="Path to config file"
+              >
+              <button id="btn-load-config" class="btn-secondary">Load</button>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">YAML Configuration</label>
+            <textarea
+              id="config-editor"
+              rows="12"
+              class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+              placeholder="udp:
+  port: 21650
+  bind: '127.0.0.1'
+
+tcp:
+  host: '127.0.0.1'
+  port: 21600"
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button id="btn-save-config" class="btn-primary">
+              Save Configuration
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Settings -->
+        <div class="metric-card">
+          <h2 class="text-lg font-semibold mb-4">Quick Settings</h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">UDP Listen Port</label>
+              <input
+                type="number"
+                id="udp-port"
+                value="21650"
+                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">TCP Destination Host</label>
+              <input
+                type="text"
+                id="tcp-host"
+                value="127.0.0.1"
+                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">TCP Destination Port</label>
+              <input
+                type="number"
+                id="tcp-port"
+                value="21600"
+                class="w-full bg-proxy-gray border border-proxy-gray-light rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proxy-accent"
+              >
+            </div>
+
+            <div class="flex justify-end">
+              <button id="btn-apply-quick" class="btn-secondary">
+                Apply to Config
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="metric-card">
+          <h2 class="text-lg font-semibold mb-4">About</h2>
+          <div class="text-sm text-gray-400 space-y-2">
+            <p><strong class="text-white">OSC Proxy</strong> v1.0.0</p>
+            <p>Forward OSC messages from UDP to TCP with SLIP framing for Lightkey</p>
+            <p class="text-xs text-gray-500 mt-4">
+              Built with Electron and Ruby<br>
+              © 2025 Your Name
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="./js/settings.js"></script>
+</body>
+</html>
