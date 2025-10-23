@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Start OSC Proxy in development mode
+# Usage: bin/start [options]
+#
+# Options:
+#   --rebuild-css    Force rebuild CSS before starting
+#   --no-css         Skip CSS build (use existing CSS)
+#   --help           Show this help message
+
+set -e  # Exit on error
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ELECTRON_APP_DIR="$PROJECT_ROOT/electron-app"
+
+# Parse command line arguments
+REBUILD_CSS=false
+SKIP_CSS=false
+
+for arg in "$@"; do
+  case $arg in
+    --rebuild-css)
+      REBUILD_CSS=true
+      shift
+      ;;
+    --no-css)
+      SKIP_CSS=true
+      shift
+      ;;
+    --help|-h)
+      echo "Start OSC Proxy in development mode"
+      echo ""
+      echo "Usage: bin/start [options]"
+      echo ""
+      echo "Options:"
+      echo "  --rebuild-css    Force rebuild CSS before starting"
+      echo "  --no-css         Skip CSS build (use existing CSS)"
+      echo "  --help, -h       Show this help message"
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}Unknown option: $arg${NC}"
+      echo "Run 'bin/start --help' for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# Print header
+echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}  OSC Proxy Development Server${NC}"
+echo -e "${BLUE}================================${NC}"
+echo ""
+
+# Check if we're in the right directory
+if [ ! -d "$ELECTRON_APP_DIR" ]; then
+  echo -e "${RED}Error: electron-app directory not found${NC}"
+  echo "Make sure you're running this script from the project root"
+  exit 1
+fi
+
+# Change to electron-app directory
+cd "$ELECTRON_APP_DIR"
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+  echo -e "${YELLOW}node_modules not found. Installing dependencies...${NC}"
+  npm install
+  echo ""
+fi
+
+# Build or check CSS
+if [ "$SKIP_CSS" = false ]; then
+  if [ "$REBUILD_CSS" = true ] || [ ! -f "dist/styles.css" ]; then
+    echo -e "${GREEN}Building CSS...${NC}"
+    npm run build:css
+    echo ""
+  else
+    echo -e "${BLUE}Using existing CSS (run with --rebuild-css to rebuild)${NC}"
+    echo ""
+  fi
+fi
+
+# Kill any existing Electron processes
+echo -e "${YELLOW}Stopping any running instances...${NC}"
+pkill -9 -f "electron.*osc-proxy-app" 2>/dev/null || true
+pkill -9 -f "OSC Proxy" 2>/dev/null || true
+sleep 1
+
+# Start the app
+echo -e "${GREEN}Starting OSC Proxy...${NC}"
+echo -e "${BLUE}Press Ctrl+C to stop${NC}"
+echo ""
+
+# Unset ELECTRON_RUN_AS_NODE to prevent issues
+unset ELECTRON_RUN_AS_NODE
+
+# Run in development mode
+NODE_ENV=development npm start

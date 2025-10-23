@@ -1,6 +1,31 @@
-# Building OSC Proxy for Distribution
+# OSC Proxy - Build & Development
 
-## Quick Start
+## Development
+
+Run the app in development mode from the project root:
+
+```bash
+# Start development server (builds CSS and starts app)
+bin/start
+
+# Force rebuild CSS before starting
+bin/start --rebuild-css
+
+# Skip CSS build (use existing)
+bin/start --no-css
+
+# Show help
+bin/start --help
+```
+
+The development server will:
+- Auto-install dependencies if missing
+- Build CSS if needed
+- Kill any running instances
+- Start the app with DevTools open
+- Show live updates as you edit code
+
+## Building for Distribution
 
 Use the convenient build script from the project root:
 
