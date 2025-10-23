@@ -94,35 +94,46 @@ module OSCProxy
     def process_osc_message(data)
       return if data.nil? || data.empty?
 
+      # Forward raw data immediately (don't wait for parsing)
+      forward_raw_data(data)
+
+      # Parse async for logging only (non-blocking)
+      parse_and_log_async(data)
+    end
+
+    def forward_raw_data(raw_data)
+      ensure_tcp_connected
+
+      return unless @tcp_connection.connected?
+
+      @tcp_connection.send_data(raw_data) || attempt_reconnect
+    end
+
+    def parse_and_log_async(data)
+      Thread.new do
+        parse_and_log(data)
+      rescue StandardError => e
+        @logger.verbose("Logging error: #{e.message}")
+      end
+    end
+
+    def parse_and_log(data)
       messages = OSC::OSCPacket.messages_from_network(data)
       osc_message = messages.first
 
-      return unless osc_message
-
-      forward_message(osc_message, data)
+      if osc_message
+        @logger.message_forwarded(osc_message)
+      else
+        @logger.warn("Forwarded unrecognized data (#{data.bytesize} bytes)")
+      end
     rescue EOFError => e
       hex_preview = data[0, 32].unpack1('H*')
-      @logger.error("Incomplete OSC message received (#{data.bytesize} bytes): #{hex_preview}...")
+      @logger.warn("Forwarded incomplete OSC message (#{data.bytesize} bytes): #{hex_preview}...")
       @logger.verbose("Error: #{e.message}")
       @logger.verbose("Full data: #{data.unpack1('H*')}")
     rescue StandardError => e
-      @logger.error("Invalid OSC message: #{e.message}")
+      @logger.warn("Forwarded unparseable data (#{data.bytesize} bytes): #{e.message}")
       @logger.verbose("Data: #{data.unpack1('H*')}")
-    end
-
-    def forward_message(osc_message, raw_data)
-      ensure_tcp_connected
-
-      if @tcp_connection.connected?
-        if @tcp_connection.send_data(raw_data)
-          @logger.message_forwarded(osc_message)
-        else
-          @logger.message_dropped(osc_message, 'TCP send failed')
-          attempt_reconnect
-        end
-      else
-        @logger.message_dropped(osc_message, 'TCP disconnected')
-      end
     end
 
     def ensure_tcp_connected

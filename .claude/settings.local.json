@@ -5,7 +5,10 @@
       "Bash(mkdir:*)",
       "Bash(bundle exec ruby:*)",
       "Bash(bundle exec rake test:*)",
-      "Bash(bundle exec rake:*)"
+      "Bash(bundle exec rake:*)",
+      "Bash(bin/rake test:*)",
+      "Bash(bin/rake:*)",
+      "Bash(bundle exec rubocop:*)"
     ],
     "deny": [],
     "ask": []
