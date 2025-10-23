@@ -15,10 +15,8 @@ module OSCProxy
     def start
       @socket = UDPSocket.new
       @socket.bind(@bind, @port)
-      @logger.success("UDP listener started on #{@bind}:#{@port}")
     rescue StandardError => e
-      @logger.error("Failed to start UDP listener: #{e.message}")
-      raise
+      raise "Failed to start UDP listener: #{e.message}"
     end
 
     def receive(timeout: 1.0)
@@ -33,7 +31,6 @@ module OSCProxy
 
       @socket.close
       @socket = nil
-      @logger.info('UDP listener stopped')
     end
   end
 end

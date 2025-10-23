@@ -20,8 +20,6 @@ module OSCProxy
     def connect
       @attempt_count += 1
 
-      @logger.verbose("Connecting to #{@host}:#{@port} (attempt #{@attempt_count})...")
-
       @socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
       sockaddr = Socket.sockaddr_in(@port, @host)
 
@@ -45,13 +43,11 @@ module OSCProxy
       @attempt_count = 0
       @current_delay = @config.reconnect_initial_delay
 
-      @logger.success("Connected to #{@host}:#{@port}")
       true
-    rescue StandardError => e
+    rescue StandardError
       @socket&.close
       @socket = nil
       @connected = false
-      @logger.error("Connection failed: #{e.message}")
       false
     end
 
@@ -75,11 +71,15 @@ module OSCProxy
     def send_data(data)
       raise 'Not connected' unless @connected
 
-      bytes_written = @socket.write(data)
-      @logger.verbose("Sent #{bytes_written} bytes over TCP")
+      # Add SLIP framing (required for OSC over TCP by Lightkey)
+      # SLIP uses 0xC0 (END) byte as delimiter before and after each packet
+      slip_end = "\xC0".b
+      framed_data = slip_end + data + slip_end
+
+      @socket.write(framed_data)
+      @socket.flush # Ensure data is sent immediately
       true
-    rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
-      @logger.warn("TCP connection lost: #{e.message}")
+    rescue Errno::EPIPE, Errno::ECONNRESET, IOError
       @connected = false
       false
     end
@@ -90,7 +90,6 @@ module OSCProxy
       @socket.close
       @socket = nil
       @connected = false
-      @logger.info('TCP connection closed')
     end
 
     def connected?
@@ -100,15 +99,8 @@ module OSCProxy
     private
 
     def configure_socket
-      if @config.tcp_keepalive?
-        @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, 1)
-        @logger.verbose('TCP keepalive enabled')
-      end
-
-      return unless @config.tcp_nodelay?
-
-      @socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-      @logger.verbose('TCP_NODELAY enabled (Nagle disabled)')
+      @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, 1) if @config.tcp_keepalive?
+      @socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1) if @config.tcp_nodelay?
     end
   end
 end

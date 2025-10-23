@@ -3,6 +3,7 @@
 require_relative '../test_helper'
 require 'socket'
 require 'timeout'
+require 'osc-ruby'
 
 module OSCProxy
   class TestProxyIntegration < Minitest::Test
@@ -36,7 +37,7 @@ module OSCProxy
       wait_for_messages(1)
 
       assert_equal 1, @received_messages.size
-      message = OSC::OSCPacket.messages_from_network(@received_messages.first).first
+      message = decode_osc_message(@received_messages.first)
 
       assert_equal '/test/cue', message.address
       assert_equal [1, 'go'], message.to_a
@@ -54,9 +55,9 @@ module OSCProxy
 
       assert_equal 3, @received_messages.size
 
-      msg1 = OSC::OSCPacket.messages_from_network(@received_messages[0]).first
-      msg2 = OSC::OSCPacket.messages_from_network(@received_messages[1]).first
-      msg3 = OSC::OSCPacket.messages_from_network(@received_messages[2]).first
+      msg1 = decode_osc_message(@received_messages[0])
+      msg2 = decode_osc_message(@received_messages[1])
+      msg3 = decode_osc_message(@received_messages[2])
 
       assert_equal '/cue/1', msg1.address
       assert_equal '/cue/2', msg2.address
@@ -79,12 +80,20 @@ module OSCProxy
       send_osc_message('/after/reconnect')
       wait_for_messages(1)
 
-      message = OSC::OSCPacket.messages_from_network(@received_messages.last).first
+      message = decode_osc_message(@received_messages.last)
 
       assert_equal '/after/reconnect', message.address
     end
 
     private
+
+    def decode_osc_message(raw_data)
+      # Strip SLIP framing (proxy adds 0xC0 delimiters for OSC over TCP)
+      # SLIP format: 0xC0 <OSC data> 0xC0
+      slip_end = "\xC0".b
+      osc_data = raw_data.delete_prefix(slip_end).delete_suffix(slip_end)
+      OSC::OSCPacket.messages_from_network(osc_data).first
+    end
 
     def start_tcp_server
       @tcp_server = TCPServer.new('127.0.0.1', @tcp_port)

@@ -10,9 +10,11 @@ require 'optparse'
 options = {
   host: '127.0.0.1',
   port: nil,
-  protocol: :tcp
+  protocol: :tcp,
+  framing: :raw # :raw, :length_prefix, :slip
 }
 
+# rubocop:disable Metrics/BlockLength
 parser = OptionParser.new do |opts|
   opts.banner = 'Usage: bin/send [options] <osc_address> [args...]'
   opts.separator ''
@@ -39,11 +41,24 @@ parser = OptionParser.new do |opts|
     options[:protocol] = :udp
   end
 
+  opts.on('--raw', 'Send raw OSC data (default)') do
+    options[:framing] = :raw
+  end
+
+  opts.on('--length-prefix', 'Prefix with 4-byte length header') do
+    options[:framing] = :length_prefix
+  end
+
+  opts.on('--slip', 'Use SLIP framing (0xC0 delimiters)') do
+    options[:framing] = :slip
+  end
+
   opts.on('--help', 'Show this help message') do
     puts opts
     exit
   end
 end
+# rubocop:enable Metrics/BlockLength
 
 parser.parse!
 
@@ -75,15 +90,38 @@ end
 
 # Create OSC message
 message = OSC::Message.new(osc_address, *osc_args)
-data = message.encode
+osc_data = message.encode
+
+# Apply framing for TCP
+data = osc_data.dup
+if options[:protocol] == :tcp
+  case options[:framing]
+  when :length_prefix
+    # 4-byte big-endian length prefix
+    length_prefix = [osc_data.bytesize].pack('N')
+    data = length_prefix + osc_data
+  when :slip
+    # SLIP framing: 0xC0 (END) byte before and after
+    slip_end = "\xC0".b
+    data = slip_end + osc_data + slip_end
+  when :raw
+    # No framing, just raw OSC data
+    data = osc_data
+  end
+end
 
 # Display message info
 puts '=== Sending OSC Message ==='
 puts "Address: #{message.address}"
 puts "Args: #{message.to_a.inspect}"
-puts "Size: #{data.bytesize} bytes"
-puts "Hex: #{data.unpack1('H*')}"
+puts "OSC size: #{osc_data.bytesize} bytes"
+puts "OSC hex: #{osc_data.unpack1('H*')}"
 puts "Protocol: #{options[:protocol].to_s.upcase}"
+if options[:protocol] == :tcp
+  puts "Framing: #{options[:framing]}"
+  puts "Total bytes: #{data.bytesize}" if options[:framing] != :raw
+  puts "Full hex: #{data.unpack1('H*')}" if options[:framing] != :raw
+end
 puts "Destination: #{options[:host]}:#{options[:port]}"
 puts
 
@@ -95,7 +133,7 @@ begin
     socket.write(data)
     socket.flush
     socket.close
-    puts '✓ Sent via TCP'
+    puts "✓ Sent via TCP (#{data.bytesize} bytes)"
   when :udp
     socket = UDPSocket.new
     socket.send(data, 0, options[:host], options[:port])

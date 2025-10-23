@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'osc-ruby'
 require_relative 'osc_proxy/config'
 require_relative 'osc_proxy/logger'
+require_relative 'osc_proxy/metrics_logger'
 require_relative 'osc_proxy/tcp_connection'
 require_relative 'osc_proxy/udp_listener'
 
@@ -14,23 +14,22 @@ module OSCProxy
         level: config.log_level,
         show_content: config.show_message_content?
       )
+      @metrics = MetricsLogger.new
       @running = false
       @tcp_connection = nil
       @udp_listener = nil
     end
 
     def start
-      @logger.info('Starting OSC Proxy...')
-      @logger.info("UDP: #{@config.udp_bind}:#{@config.udp_port} -> TCP: #{@config.tcp_host}:#{@config.tcp_port}")
-
       setup_signal_handlers
       setup_udp_listener
       setup_tcp_connection
 
+      @metrics.start
       @running = true
       run_proxy_loop
     rescue Interrupt
-      @logger.info('Received interrupt signal')
+      # Silent interrupt
     ensure
       shutdown
     end
@@ -44,7 +43,6 @@ module OSCProxy
     def setup_signal_handlers
       %w[INT TERM].each do |signal|
         Signal.trap(signal) do
-          @logger.info("Received #{signal} signal")
           stop
         end
       end
@@ -72,14 +70,10 @@ module OSCProxy
     end
 
     def attempt_tcp_connection
-      return if @tcp_connection.connect
-
-      @logger.warn('Initial TCP connection failed, will retry on first message')
+      @tcp_connection.connect
     end
 
     def run_proxy_loop
-      @logger.success('Proxy running. Press Ctrl+C to stop.')
-
       handle_incoming_message while @running
     end
 
@@ -87,65 +81,39 @@ module OSCProxy
       data = @udp_listener.receive
 
       if data
-        @logger.verbose("Received #{data.bytesize} bytes from UDP")
+        @metrics.record_received
         process_osc_message(data)
       end
-    rescue StandardError => e
-      @logger.error("Error receiving UDP message: #{e.message}")
-      @logger.verbose(e.backtrace.join("\n"))
+    rescue StandardError
+      # Silently continue on errors
     end
 
     def process_osc_message(data)
       return if data.nil? || data.empty?
 
-      @logger.verbose("Processing #{data.bytesize} bytes")
+      # Forward raw data immediately and measure latency
+      start_time = Time.now
+      success = forward_raw_data(data)
+      latency_ms = ((Time.now - start_time) * 1000).round(2)
 
-      # Forward raw data immediately (don't wait for parsing)
-      forward_raw_data(data)
-
-      # Parse async for logging only (non-blocking)
-      parse_and_log_async(data)
+      if success
+        @metrics.record_forwarded(latency_ms)
+      else
+        @metrics.record_dropped
+      end
     end
 
     def forward_raw_data(raw_data)
       ensure_tcp_connected
 
-      return unless @tcp_connection.connected?
+      return false unless @tcp_connection.connected?
 
-      @tcp_connection.send_data(raw_data) || attempt_reconnect
-    end
-
-    def parse_and_log_async(data)
-      Thread.new do
-        parse_and_log(data)
-      rescue StandardError => e
-        @logger.verbose("Logging error: #{e.message}")
-      end
-    end
-
-    def parse_and_log(data)
-      messages = OSC::OSCPacket.messages_from_network(data)
-      osc_message = messages.first
-
-      if osc_message
-        @logger.message_forwarded(osc_message)
-      else
-        @logger.warn("Forwarded unrecognized data (#{data.bytesize} bytes)")
-      end
-    rescue EOFError => e
-      hex_preview = data[0, 32].unpack1('H*')
-      @logger.warn("Forwarded incomplete OSC message (#{data.bytesize} bytes): #{hex_preview}...")
-      @logger.verbose("Error: #{e.message}")
-      @logger.verbose("Full data: #{data.unpack1('H*')}")
-    rescue StandardError => e
-      @logger.warn("Forwarded unparseable data (#{data.bytesize} bytes): #{e.message}")
-      @logger.verbose("Data: #{data.unpack1('H*')}")
+      @tcp_connection.send_data(raw_data)
     end
 
     def ensure_tcp_connected
       return if @tcp_connection.connected?
 
-      @logger.warn('TCP not connected, attempting to connect...')
       attempt_reconnect
     end
 
@@ -156,10 +124,9 @@ module OSCProxy
     end
 
     def shutdown
-      @logger.info('Shutting down...')
+      @metrics&.stop
       @udp_listener&.stop
       @tcp_connection&.close
-      @logger.info('Proxy stopped')
     end
   end
 end
