@@ -4,72 +4,120 @@
 let transmitters = [];
 let selectedTransmitterId = null;
 let editingReceiverId = null;
+let isInitialized = false;
 
-// DOM Elements
-const transmittersList = document.getElementById('transmitters-list');
-const noSelection = document.getElementById('no-selection');
-const transmitterDetails = document.getElementById('transmitter-details');
-const receiversList = document.getElementById('receivers-list');
-const noReceivers = document.getElementById('no-receivers');
-const receiverModal = document.getElementById('receiver-modal');
+// DOM Elements (initialized lazily)
+let transmittersList;
+let noSelection;
+let transmitterDetails;
+let receiversList;
+let noReceivers;
+let receiverModal;
 
-// Buttons
-const btnClose = document.getElementById('btn-close');
-const btnAddTransmitter = document.getElementById('btn-add-transmitter');
-const btnSaveTransmitter = document.getElementById('btn-save-transmitter');
-const btnDeleteTransmitter = document.getElementById('btn-delete-transmitter');
-const btnAddReceiver = document.getElementById('btn-add-receiver');
-const btnSaveReceiver = document.getElementById('btn-save-receiver');
-const btnCancelReceiver = document.getElementById('btn-cancel-receiver');
+// Buttons (will be initialized in init())
+let btnClose;
+let btnAddTransmitter;
+let btnSaveTransmitter;
+let btnDeleteTransmitter;
+let btnAddReceiver;
+let btnSaveReceiver;
+let btnCancelReceiver;
 
-// Transmitter form fields
-const txName = document.getElementById('tx-name');
-const txProtocol = document.getElementById('tx-protocol');
-const txPort = document.getElementById('tx-port');
-const txBind = document.getElementById('tx-bind');
-const txTcpPort = document.getElementById('tx-tcp-port');
-const txTcpBind = document.getElementById('tx-tcp-bind');
-const txEnabled = document.getElementById('tx-enabled');
-const txUdpFields = document.getElementById('tx-udp-fields');
-const txTcpFields = document.getElementById('tx-tcp-fields');
+// Transmitter form fields (initialized lazily)
+let txName;
+let txProtocol;
+let txPort;
+let txBind;
+let txTcpPort;
+let txTcpBind;
+let txEnabled;
+let txUdpFields;
+let txTcpFields;
 
-// Receiver form fields
-const rxName = document.getElementById('rx-name');
-const rxProtocol = document.getElementById('rx-protocol');
-const rxHost = document.getElementById('rx-host');
-const rxPort = document.getElementById('rx-port');
-const rxEnabled = document.getElementById('rx-enabled');
-const receiverModalTitle = document.getElementById('receiver-modal-title');
+// Receiver form fields (initialized lazily)
+let rxName;
+let rxProtocol;
+let rxHost;
+let rxPort;
+let rxEnabled;
+let receiverModalTitle;
 
 // Initialize
 async function init() {
-  // Event listeners
-  btnClose.addEventListener('click', closeWindow);
-  btnAddTransmitter.addEventListener('click', addTransmitter);
-  btnSaveTransmitter.addEventListener('click', saveTransmitter);
-  btnDeleteTransmitter.addEventListener('click', deleteTransmitter);
-  btnAddReceiver.addEventListener('click', showAddReceiverModal);
-  btnSaveReceiver.addEventListener('click', saveReceiver);
-  btnCancelReceiver.addEventListener('click', hideReceiverModal);
+  // Get all DOM elements
+  transmittersList = document.getElementById('transmitters-list');
+  noSelection = document.getElementById('no-selection');
+  transmitterDetails = document.getElementById('transmitter-details');
+  receiversList = document.getElementById('receivers-list');
+  noReceivers = document.getElementById('no-receivers');
+  receiverModal = document.getElementById('receiver-modal');
 
-  txProtocol.addEventListener('change', updateProtocolFields);
+  // Buttons
+  btnClose = document.getElementById('btn-close-settings');
+  btnAddTransmitter = document.getElementById('btn-add-transmitter');
+  btnSaveTransmitter = document.getElementById('btn-save-transmitter');
+  btnDeleteTransmitter = document.getElementById('btn-delete-transmitter');
+  btnAddReceiver = document.getElementById('btn-add-receiver');
+  btnSaveReceiver = document.getElementById('btn-save-receiver');
+  btnCancelReceiver = document.getElementById('btn-cancel-receiver');
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (!receiverModal.classList.contains('hidden')) {
-        hideReceiverModal();
-      } else {
-        closeWindow();
-      }
-    }
-  });
+  // Transmitter form fields
+  txName = document.getElementById('tx-name');
+  txProtocol = document.getElementById('tx-protocol');
+  txPort = document.getElementById('tx-port');
+  txBind = document.getElementById('tx-bind');
+  txTcpPort = document.getElementById('tx-tcp-port');
+  txTcpBind = document.getElementById('tx-tcp-bind');
+  txEnabled = document.getElementById('tx-enabled');
+  txUdpFields = document.getElementById('tx-udp-fields');
+  txTcpFields = document.getElementById('tx-tcp-fields');
 
-  // Load transmitters
+  // Receiver form fields
+  rxName = document.getElementById('rx-name');
+  rxProtocol = document.getElementById('rx-protocol');
+  rxHost = document.getElementById('rx-host');
+  rxPort = document.getElementById('rx-port');
+  rxEnabled = document.getElementById('rx-enabled');
+  receiverModalTitle = document.getElementById('receiver-modal-title');
+
+  // Only set up event listeners once
+  if (!isInitialized) {
+    // Event listeners
+    if (btnClose) btnClose.addEventListener('click', closeSettings);
+    if (btnAddTransmitter) btnAddTransmitter.addEventListener('click', addTransmitter);
+    if (btnSaveTransmitter) btnSaveTransmitter.addEventListener('click', saveTransmitter);
+    if (btnDeleteTransmitter) btnDeleteTransmitter.addEventListener('click', deleteTransmitter);
+    if (btnAddReceiver) btnAddReceiver.addEventListener('click', showAddReceiverModal);
+    if (btnSaveReceiver) btnSaveReceiver.addEventListener('click', saveReceiver);
+    if (btnCancelReceiver) btnCancelReceiver.addEventListener('click', hideReceiverModal);
+
+    if (txProtocol) txProtocol.addEventListener('change', updateProtocolFields);
+
+    window.addEventListener('keydown', handleEscapeKey);
+
+    isInitialized = true;
+  }
+
+  // Load transmitters (always refresh when opening settings)
   await loadTransmitters();
 }
 
-function closeWindow() {
-  window.close();
+function handleEscapeKey(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('receiver-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+      hideReceiverModal();
+    } else {
+      closeSettings();
+    }
+  }
+}
+
+function closeSettings() {
+  // Switch back to dashboard view
+  if (window.showView) {
+    window.showView('dashboard');
+  }
 }
 
 // Transmitter Management

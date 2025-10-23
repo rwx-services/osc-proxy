@@ -120,7 +120,7 @@ function createMenu() {
   const template = [
     // App menu (macOS only)
     ...(isMac ? [{
-      label: app.name,
+      label: 'OSC Proxy',
       submenu: [
         {
           label: 'About OSC Proxy',
