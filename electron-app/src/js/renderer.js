@@ -14,7 +14,6 @@ const noListeners = document.getElementById('no-listeners');
 const metricRate = document.getElementById('metric-rate');
 const metricAvgRate = document.getElementById('metric-avg-rate');
 const metricPeakRate = document.getElementById('metric-peak-rate');
-const metricLatency = document.getElementById('metric-latency');
 const metricTotal = document.getElementById('metric-total');
 const metricForwarded = document.getElementById('metric-forwarded');
 const metricDropped = document.getElementById('metric-dropped');
@@ -190,8 +189,7 @@ function updateAggregateMetrics(metrics) {
   metricAvgRate.textContent = formatNumber(metrics.avg_rate || metrics.avgRate || 0, 1);
   metricPeakRate.textContent = formatNumber(metrics.peak_rate || metrics.peakRate || 0, 1);
 
-  // Update secondary metrics
-  metricLatency.textContent = formatNumber(metrics.latency || 0, 2);
+  // Update secondary metrics (latency removed - shown per-forwarder instead)
   metricTotal.textContent = formatNumber(metrics.total || 0);
   metricForwarded.textContent = formatNumber(metrics.forwarded || 0);
   metricDropped.textContent = formatNumber(metrics.dropped || 0);
