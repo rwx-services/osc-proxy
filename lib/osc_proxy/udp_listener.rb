@@ -21,7 +21,9 @@ module OSCProxy
       raise
     end
 
-    def receive
+    def receive(timeout: 1.0)
+      return nil unless @socket.wait_readable(timeout)
+
       data, = @socket.recvfrom(@max_size)
       data
     end

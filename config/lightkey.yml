@@ -1,0 +1,29 @@
+# OSC Proxy Configuration Example
+# Copy this file to osc_proxy.yml and customize for your setup
+
+# UDP listener configuration
+udp:
+  port: 21650 # Port to listen for incoming OSC messages
+  bind: "0.0.0.0" # Interface to bind to (0.0.0.0 = all interfaces)
+  max_message_size: 8192 # Maximum OSC message size in bytes
+
+# TCP destination configuration
+tcp:
+  host: "127.0.0.1" # IP address of DMX/lighting system
+  port: 21600 # TCP port of DMX/lighting system
+  keepalive: true # Enable TCP keepalive (recommended for WiFi)
+  keepalive_interval: 10 # Keepalive probe interval in seconds
+  nodelay: true # Disable Nagle's algorithm for lower latency
+  connect_timeout: 5 # Connection timeout in seconds
+
+# Reconnection strategy
+reconnect:
+  max_attempts: -1 # Maximum reconnection attempts (-1 = infinite)
+  initial_delay: 0.1 # Initial delay before first reconnect (seconds)
+  max_delay: 5.0 # Maximum delay between reconnect attempts (seconds)
+  backoff_multiplier: 2.0 # Exponential backoff multiplier
+
+# Logging configuration
+logging:
+  level: "normal" # Log level: quiet, normal, or verbose
+  show_message_content: true # Show OSC message addresses and arguments in logs
