@@ -85,6 +85,8 @@ module OSCProxy
         enabled: @config[:enabled],
         protocol: @config[:protocol],
         port: @config[:port],
+        bind_address: @config[:bind_address],
+        status: running? ? 'running' : 'stopped',
         rate: @metrics.rate,
         avg_rate: @metrics.avg_rate,
         peak_rate: @metrics.peak_rate,
@@ -93,7 +95,8 @@ module OSCProxy
         forwarded: @metrics.total_forwarded,
         dropped: @metrics.total_dropped,
         loss_pct: @metrics.loss_percentage,
-        receivers: @receivers.map { |r| receiver_status(r) }
+        receivers: @receivers.map { |r| receiver_status(r) },
+        receivers_count: @receivers.length
       }
     end
 
