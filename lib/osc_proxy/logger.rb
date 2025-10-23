@@ -14,6 +14,24 @@ module OSCProxy
       @output = output
     end
 
+    # Generic log method that routes to appropriate level
+    def log(level, message)
+      case level
+      when :info
+        info(message)
+      when :error
+        error(message)
+      when :verbose
+        verbose(message)
+      when :warn
+        warn(message)
+      when :success
+        success(message)
+      else
+        info(message) # Default to info
+      end
+    end
+
     def info(message)
       return unless @level >= LEVELS[:normal]
 

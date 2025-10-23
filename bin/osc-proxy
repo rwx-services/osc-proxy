@@ -2,14 +2,80 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'optparse'
 
 require_relative '../lib/version'
 require_relative '../lib/osc_proxy'
+require_relative '../lib/osc_proxy/multi_proxy'
+
+# Parse CLI options
+options = {}
+OptionParser.new do |opts|
+  opts.banner = 'Usage: osc-proxy [options]'
+
+  opts.on('-d', '--database PATH', 'SQLite database path (multi-transmitter mode)') do |path|
+    options[:database] = path
+  end
+
+  opts.on('-c', '--config FILE', 'YAML configuration file (single-transmitter mode)') do |file|
+    options[:config] = file
+  end
+
+  opts.on('--json', 'Output metrics as JSON') do
+    options[:json] = true
+  end
+
+  opts.on('-v', '--version', 'Show version') do
+    puts "osc-proxy version #{OSCProxy::VERSION}"
+    exit
+  end
+
+  opts.on('-h', '--help', 'Show this help message') do
+    puts opts
+    puts
+    puts 'Examples:'
+    puts '  # Multi-transmitter mode (database):'
+    puts '  osc-proxy --database ~/proxy.db'
+    puts
+    puts '  # Single-transmitter mode (YAML - legacy):'
+    puts '  osc-proxy --config config/lightkey.yml'
+    puts
+    puts '  # JSON output for Electron integration:'
+    puts '  osc-proxy --database ~/proxy.db --json'
+    exit
+  end
+end.parse!
 
 begin
-  config = OSCProxy::Config.from_cli(ARGV)
-  proxy = OSCProxy::Proxy.new(config)
-  proxy.start
+  # Determine which mode to use
+  if options[:database]
+    # Multi-transmitter mode
+    unless File.exist?(options[:database])
+      raise "Database file not found: #{options[:database]}"
+    end
+
+    logger = OSCProxy::Logger.new(level: :normal, show_content: false)
+    proxy = OSCProxy::MultiProxy.new(
+      options[:database],
+      logger: logger,
+      json_mode: options[:json] || false
+    )
+    proxy.start
+
+  elsif options[:config]
+    # Single-transmitter mode (legacy YAML)
+    config = OSCProxy::Config.from_file(options[:config])
+    config = config.merge('logging' => { 'json_mode' => true }) if options[:json]
+    proxy = OSCProxy::Proxy.new(config)
+    proxy.start
+
+  else
+    # No options provided - show help
+    puts 'Error: Either --database or --config must be specified'
+    puts 'Run with --help for usage information'
+    exit 1
+  end
+
 rescue StandardError => e
   warn "Error: #{e.message}"
   warn e.backtrace.join("\n") if ENV['DEBUG']
