@@ -70,7 +70,7 @@ logging:
 ### 2. Run the Proxy
 
 ```bash
-bundle exec bin/osc-proxy --config config/osc_proxy.yml
+bin/osc-proxy --config config/osc_proxy.yml
 ```
 
 ### 3. Send Test OSC Message
