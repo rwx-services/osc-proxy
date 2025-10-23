@@ -92,12 +92,20 @@ module OSCProxy
     end
 
     def process_osc_message(data)
+      return if data.nil? || data.empty?
+
       messages = OSC::OSCPacket.messages_from_network(data)
       osc_message = messages.first
 
+      return unless osc_message
+
       forward_message(osc_message, data)
+    rescue EOFError => e
+      @logger.error("Incomplete OSC message received (#{data.bytesize} bytes)")
+      @logger.verbose("Error: #{e.message}")
     rescue StandardError => e
       @logger.error("Invalid OSC message: #{e.message}")
+      @logger.verbose("Data: #{data.unpack1('H*')}")
     end
 
     def forward_message(osc_message, raw_data)
