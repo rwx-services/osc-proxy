@@ -264,7 +264,24 @@ function createMenu() {
 
 function createTray() {
   // Create a simple tray icon (you'll want to add a real icon later)
-  tray = new Tray(path.join(__dirname, 'assets', 'trayIcon.png'));
+  const iconPath = path.join(__dirname, 'assets', 'trayIcon.png');
+
+  // Check if icon exists, if not use a built-in Electron icon or create NativeImage
+  let trayIcon;
+  try {
+    if (fs.existsSync(iconPath)) {
+      trayIcon = iconPath;
+    } else {
+      // Create a simple text-based icon if no icon file exists
+      const { nativeImage } = require('electron');
+      trayIcon = nativeImage.createEmpty();
+    }
+    tray = new Tray(trayIcon);
+  } catch (error) {
+    console.error('Failed to create tray icon:', error);
+    // Continue without tray icon
+    return;
+  }
 
   const contextMenu = Menu.buildFromTemplate([
     {
