@@ -197,8 +197,13 @@ async function saveTransmitter() {
       data.bind_address = txTcpBind.value || '127.0.0.1';
     }
 
-    await window.electronAPI.dbUpdateTransmitter(selectedTransmitterId, data);
+    console.log('Saving transmitter with data:', data);
+    console.log('txEnabled.checked:', txEnabled.checked);
+    const result = await window.electronAPI.dbUpdateTransmitter(selectedTransmitterId, data);
+    console.log('Update result:', result);
     await loadTransmitters();
+    // Re-select the transmitter to refresh the form
+    selectTransmitter(selectedTransmitterId);
     showNotification('Transmitter saved', 'success');
   } catch (error) {
     showNotification('Failed to save transmitter: ' + error.message, 'error');
