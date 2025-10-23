@@ -72,35 +72,18 @@ function createMainWindow() {
   });
 }
 
-function createSettingsWindow() {
-  if (settingsWindow) {
-    settingsWindow.focus();
-    return;
+// Show settings in main window (overlay)
+function showSettings() {
+  if (mainWindow) {
+    mainWindow.webContents.send('show-settings');
+    mainWindow.focus();
   }
+}
 
-  settingsWindow = new BrowserWindow({
-    width: 800,
-    height: 740,
-    minWidth: 800,
-    maxWidth: 800,
-    minHeight: 740,
-    maxHeight: 740,
-    resizable: false,
-    maximizable: false,
-    title: 'OSC Proxy - Settings',
-    backgroundColor: '#0f172a',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  settingsWindow.loadFile(path.join(__dirname, 'src', 'settings.html'));
-
-  settingsWindow.on('closed', () => {
-    settingsWindow = null;
-  });
+// Legacy function - no longer used, kept for backward compatibility
+function createSettingsWindow() {
+  // Now just shows settings in main window instead
+  showSettings();
 }
 
 function createActivityLogWindow() {

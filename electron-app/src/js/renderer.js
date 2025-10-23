@@ -60,6 +60,11 @@ async function init() {
 
   // Listen for settings open command from main process
   window.electronAPI.onShowSettings(() => showView('settings'));
+
+  // Listen for transmitter changes from settings view
+  window.addEventListener('transmitters-changed', () => {
+    loadTransmittersFromDatabase();
+  });
 }
 
 function showView(view) {

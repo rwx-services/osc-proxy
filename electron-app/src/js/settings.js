@@ -173,6 +173,10 @@ async function addTransmitter() {
     if (result.success && result.data) {
       selectTransmitter(result.data.id);
     }
+
+    // Notify dashboard to reload transmitters
+    notifyDashboardUpdate();
+
     showNotification('Transmitter created', 'success');
   } catch (error) {
     showNotification('Failed to create transmitter: ' + error.message, 'error');
@@ -212,6 +216,9 @@ async function saveTransmitter() {
     await selectTransmitter(selectedTransmitterId);
     console.log('After reload - transmitter enabled:', transmitters.find(t => t.id === selectedTransmitterId)?.enabled);
 
+    // Notify dashboard to reload transmitters
+    notifyDashboardUpdate();
+
     showNotification('Transmitter saved', 'success');
   } catch (error) {
     console.error('Save error:', error);
@@ -234,6 +241,9 @@ async function deleteTransmitter() {
 
     noSelection.classList.remove('hidden');
     transmitterDetails.classList.add('hidden');
+
+    // Notify dashboard to reload transmitters
+    notifyDashboardUpdate();
 
     showNotification('Transmitter deleted', 'success');
   } catch (error) {
@@ -401,6 +411,12 @@ function showNotification(message, type) {
   setTimeout(() => {
     notification.remove();
   }, 3000);
+}
+
+// Notify dashboard to reload transmitters
+function notifyDashboardUpdate() {
+  // Trigger a custom event that the dashboard can listen to
+  window.dispatchEvent(new CustomEvent('transmitters-changed'));
 }
 
 // Expose init for view switching
