@@ -25,6 +25,7 @@ module OSCProxy
       @metrics = MetricsLogger.new(json_mode: json_mode)
       @running = false
       @thread = nil
+      @reconnect_thread = nil
     end
 
     # Start the listener proxy in a background thread
@@ -53,6 +54,10 @@ module OSCProxy
       @thread = Thread.new { run_proxy_loop }
       @thread.name = "listener-#{@name}"
 
+      # Start reconnection thread for disconnected forwarders
+      @reconnect_thread = Thread.new { run_reconnect_loop }
+      @reconnect_thread.name = "reconnect-#{@name}"
+
       @logger.log(:info, "Listener #{@name} started successfully")
       true
     rescue StandardError => e
@@ -66,6 +71,7 @@ module OSCProxy
       @logger.log(:info, "Stopping listener: #{@name}")
       @running = false
       @thread&.join(5) # Wait up to 5 seconds for thread to finish
+      @reconnect_thread&.join(2) # Wait up to 2 seconds for reconnect thread
       @metrics&.stop
       @listener&.stop
       @forwarders.each(&:close)
@@ -185,6 +191,31 @@ module OSCProxy
       @logger.log(:error, e.backtrace.join("\n"))
     end
 
+    def run_reconnect_loop
+      @logger.log(:info, "#{@name}: Reconnect loop started")
+
+      while @running
+        sleep 5 # Check every 5 seconds for disconnected forwarders
+
+        # Try to reconnect any disconnected forwarders
+        @forwarders.each do |forwarder|
+          next if forwarder.connected?
+          next unless forwarder.respond_to?(:reconnect)
+
+          # Attempt reconnection (this will sleep with backoff, but it's OK since
+          # this is a dedicated reconnection thread, not the message processing thread)
+          if forwarder.reconnect
+            @logger.log(:info, "#{@name}: Reconnected forwarder #{forwarder.name}")
+          end
+        end
+      end
+
+      @logger.log(:info, "#{@name}: Reconnect loop stopped")
+    rescue StandardError => e
+      @logger.log(:error, "#{@name}: Reconnect loop error: #{e.message}")
+      @logger.log(:error, e.backtrace.join("\n"))
+    end
+
     def handle_incoming_message
       data = @listener.receive(timeout: 0.5)
 
@@ -225,11 +256,9 @@ module OSCProxy
     end
 
     def forward_to_forwarder(forwarder, data, send_start)
-      # Ensure forwarder is connected
-      unless forwarder.connected?
-        forwarder.reconnect if forwarder.respond_to?(:reconnect)
-        return false unless forwarder.connected?
-      end
+      # Skip if forwarder is not connected - don't block trying to reconnect
+      # Reconnection will be handled by a background thread
+      return false unless forwarder.connected?
 
       # Calculate latency for this specific forwarder
       latency_ms = ((Time.now - send_start) * 1000).round(2)
