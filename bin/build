@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# Build OSC Proxy distribution packages
+# Usage: bin/build [options]
+#
+# Options:
+#   --portable    Build only portable formats (ZIP + unpacked directory)
+#   --dmg         Build only DMG installer
+#   --all         Build all formats (default)
+#   --help        Show this help message
+
+set -e  # Exit on error
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ELECTRON_APP_DIR="$PROJECT_ROOT/electron-app"
+
+# Parse command line arguments
+BUILD_TYPE="all"
+
+for arg in "$@"; do
+  case $arg in
+    --portable)
+      BUILD_TYPE="portable"
+      shift
+      ;;
+    --dmg)
+      BUILD_TYPE="dmg"
+      shift
+      ;;
+    --all)
+      BUILD_TYPE="all"
+      shift
+      ;;
+    --help|-h)
+      echo "Build OSC Proxy distribution packages"
+      echo ""
+      echo "Usage: bin/build [options]"
+      echo ""
+      echo "Options:"
+      echo "  --portable    Build only portable formats (ZIP + unpacked directory)"
+      echo "  --dmg         Build only DMG installer"
+      echo "  --all         Build all formats (default)"
+      echo "  --help, -h    Show this help message"
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}Unknown option: $arg${NC}"
+      echo "Run 'bin/build --help' for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# Print header
+echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}  OSC Proxy Build Script${NC}"
+echo -e "${BLUE}================================${NC}"
+echo ""
+
+# Check if we're in the right directory
+if [ ! -d "$ELECTRON_APP_DIR" ]; then
+  echo -e "${RED}Error: electron-app directory not found${NC}"
+  echo "Make sure you're running this script from the project root"
+  exit 1
+fi
+
+# Change to electron-app directory
+cd "$ELECTRON_APP_DIR"
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+  echo -e "${YELLOW}node_modules not found. Installing dependencies...${NC}"
+  npm install
+  echo ""
+fi
+
+# Build CSS
+echo -e "${GREEN}Building CSS...${NC}"
+npm run build:css
+echo ""
+
+# Build based on type
+case $BUILD_TYPE in
+  portable)
+    echo -e "${GREEN}Building portable formats (ZIP + unpacked directory)...${NC}"
+    npx electron-builder --mac zip dir
+    ;;
+  dmg)
+    echo -e "${GREEN}Building DMG installer...${NC}"
+    npx electron-builder --mac dmg
+    ;;
+  all)
+    echo -e "${GREEN}Building all formats (DMG + ZIP + unpacked directory)...${NC}"
+    npx electron-builder
+    ;;
+esac
+
+echo ""
+echo -e "${GREEN}================================${NC}"
+echo -e "${GREEN}  Build Complete!${NC}"
+echo -e "${GREEN}================================${NC}"
+echo ""
+echo -e "${BLUE}Output directory:${NC} $ELECTRON_APP_DIR/dist-build"
+echo ""
+
+# List the built files
+if [ -d "dist-build" ]; then
+  echo -e "${BLUE}Built files:${NC}"
+  ls -lh dist-build/*.{dmg,zip} 2>/dev/null || true
+  if [ -d "dist-build/mac-universal" ]; then
+    echo -e "${BLUE}Unpacked app:${NC} dist-build/mac-universal/OSC Proxy.app"
+  fi
+fi
+
+echo ""
+echo -e "${YELLOW}For USB drive distribution:${NC}"
+echo -e "  Copy ${BLUE}OSC Proxy-*.zip${NC} to USB drive"
+echo -e "  Users extract and run ${BLUE}OSC Proxy.app${NC}"
+echo ""
+echo -e "${YELLOW}For installation:${NC}"
+echo -e "  Distribute ${BLUE}OSC Proxy-*.dmg${NC}"
+echo ""
