@@ -5,8 +5,11 @@
 Run the app in development mode from the project root:
 
 ```bash
-# Start development server (builds CSS and starts app)
+# Start app (builds CSS and starts)
 bin/start
+
+# Start with DevTools inspector open
+bin/start --dev
 
 # Force rebuild CSS before starting
 bin/start --rebuild-css
@@ -22,7 +25,7 @@ The development server will:
 - Auto-install dependencies if missing
 - Build CSS if needed
 - Kill any running instances
-- Start the app with DevTools open
+- Start the app (without DevTools unless --dev is specified)
 - Show live updates as you edit code
 
 ## Building for Distribution

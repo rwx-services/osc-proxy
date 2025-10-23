@@ -5,6 +5,7 @@
 # Options:
 #   --rebuild-css    Force rebuild CSS before starting
 #   --no-css         Skip CSS build (use existing CSS)
+#   --dev            Open DevTools inspector (development mode)
 #   --help           Show this help message
 
 set -e  # Exit on error
@@ -24,6 +25,7 @@ ELECTRON_APP_DIR="$PROJECT_ROOT/electron-app"
 # Parse command line arguments
 REBUILD_CSS=false
 SKIP_CSS=false
+DEV_MODE=false
 
 for arg in "$@"; do
   case $arg in
@@ -35,6 +37,10 @@ for arg in "$@"; do
       SKIP_CSS=true
       shift
       ;;
+    --dev)
+      DEV_MODE=true
+      shift
+      ;;
     --help|-h)
       echo "Start OSC Proxy in development mode"
       echo ""
@@ -43,6 +49,7 @@ for arg in "$@"; do
       echo "Options:"
       echo "  --rebuild-css    Force rebuild CSS before starting"
       echo "  --no-css         Skip CSS build (use existing CSS)"
+      echo "  --dev            Open DevTools inspector (development mode)"
       echo "  --help, -h       Show this help message"
       exit 0
       ;;
@@ -103,5 +110,10 @@ echo ""
 # Unset ELECTRON_RUN_AS_NODE to prevent issues
 unset ELECTRON_RUN_AS_NODE
 
-# Run in development mode
-NODE_ENV=development npm start
+# Run the app (with or without DevTools)
+if [ "$DEV_MODE" = true ]; then
+  echo -e "${BLUE}Starting with DevTools inspector...${NC}"
+  NODE_ENV=development npm start
+else
+  npm start
+fi
