@@ -474,7 +474,10 @@ ipcMain.handle('stop-proxy', () => {
 });
 
 ipcMain.handle('open-settings', () => {
-  createSettingsWindow();
+  // Send event to main window to show settings view
+  if (mainWindow) {
+    mainWindow.webContents.send('show-settings');
+  }
   return { success: true };
 });
 

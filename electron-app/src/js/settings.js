@@ -403,7 +403,10 @@ function showNotification(message, type) {
   }, 3000);
 }
 
-// Initialize
+// Expose init for view switching
+window.settingsInit = init;
+
+// Initialize on DOM load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

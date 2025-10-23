@@ -33,6 +33,9 @@ async function init() {
   const state = await window.electronAPI.getProxyState();
   updateProxyState(state);
 
+  // Load transmitters from database to show even when stopped
+  await loadTransmittersFromDatabase();
+
   // Listen for updates from main process
   window.electronAPI.onMetricsUpdate(updateMetrics);
   window.electronAPI.onProxyStateChanged(updateProxyState);
@@ -46,12 +49,72 @@ async function init() {
     await window.electronAPI.stopProxy();
   });
 
+  // Settings close button
+  document.getElementById('btn-close-settings').addEventListener('click', () => showView('dashboard'));
+
   // Open settings button (in empty state)
   const openSettingsBtn = document.getElementById('btn-open-settings');
   if (openSettingsBtn) {
-    openSettingsBtn.addEventListener('click', () => {
-      window.electronAPI.openSettings();
-    });
+    openSettingsBtn.addEventListener('click', () => showView('settings'));
+  }
+
+  // Listen for settings open command from main process
+  window.electronAPI.onShowSettings(() => showView('settings'));
+}
+
+function showView(view) {
+  const dashboard = document.getElementById('view-dashboard');
+  const settings = document.getElementById('view-settings');
+  const dashboardHeader = document.getElementById('dashboard-header');
+  const settingsHeader = document.getElementById('settings-header');
+
+  if (view === 'dashboard') {
+    dashboard.classList.remove('hidden');
+    settings.classList.add('hidden');
+    dashboardHeader.classList.remove('hidden');
+    settingsHeader.classList.add('hidden');
+
+    // Reload transmitters on dashboard when switching back
+    loadTransmittersFromDatabase();
+  } else if (view === 'settings') {
+    dashboard.classList.add('hidden');
+    settings.classList.remove('hidden');
+    dashboardHeader.classList.add('hidden');
+    settingsHeader.classList.remove('hidden');
+
+    // Trigger settings init if it exists
+    if (window.settingsInit) {
+      window.settingsInit();
+    }
+  }
+}
+
+// Expose showView globally for menu commands
+window.showView = showView;
+
+async function loadTransmittersFromDatabase() {
+  try {
+    const result = await window.electronAPI.dbGetTransmitters();
+    if (result.success && result.data && result.data.length > 0) {
+      // Show transmitters in idle state
+      const transmitters = result.data.map(tx => ({
+        name: tx.name,
+        protocol: tx.protocol,
+        status: 'idle',
+        rate: 0,
+        latency: 0,
+        total: 0,
+        forwarded: 0,
+        dropped: 0,
+        bind: tx.bind_address,
+        bind_address: tx.bind_address,
+        port: tx.port,
+        receivers_count: tx.receivers ? tx.receivers.length : 0
+      }));
+      updateTransmitters(transmitters);
+    }
+  } catch (error) {
+    console.error('Failed to load transmitters from database:', error);
   }
 }
 

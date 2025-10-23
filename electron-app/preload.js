@@ -45,6 +45,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onProxyLog: (callback) => {
     ipcRenderer.on('proxy-log', (event, log) => callback(log));
   },
+  onShowSettings: (callback) => {
+    ipcRenderer.on('show-settings', () => callback());
+  },
 
   // Remove listeners
   removeMetricsListener: () => {
